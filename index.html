@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
 /* ---------- design tokens ---------- */
 :root{
@@ -23,7 +23,7 @@
   --ok:#22c55e; --ok-soft:rgba(34,197,94,.14); --warn:#f59e0b; --warn-soft:rgba(245,158,11,.16); --bad:#ef4444; --bad-soft:rgba(239,68,68,.12);
   --ring-bg:#e8eaf1; --shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px -12px rgba(15,23,42,.14); --shadow-lg:0 20px 50px -20px rgba(15,23,42,.35);
   --r:18px; --r-sm:12px; --ease:cubic-bezier(.2,.8,.2,1); --spring:cubic-bezier(.22,1.3,.36,1);
-  --sidebar:240px;
+  --sidebar:240px; --font-display:Sora,Inter,-apple-system,sans-serif;
 }
 :root[data-theme="dark"]{
   --bg:#0b0d14; --bg2:#10131c; --card:#151823; --text:#e8eaf2; --text2:#c3c8d6; --muted:#8b90a3; --line:#232736; --line2:#2f3447;
@@ -39,9 +39,10 @@
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased;transition:background .3s,color .3s}
+body{margin:0;background:var(--bg);background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transparent) 1px,transparent 1.5px);background-size:22px 22px;color:var(--text);font:15px/1.45 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased;transition:background .3s,color .3s}
 a{color:var(--accent);text-decoration:none}
 button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3,.greet,.ring text,.big{font-family:var(--font-display)}
 h1,h2,h3{margin:0;letter-spacing:-.01em}
 ::selection{background:var(--accent-soft)}
 
@@ -139,6 +140,7 @@ section{margin-bottom:26px}
 .hero::before{content:"";position:absolute;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.1);right:120px;bottom:-110px;animation:float 7s ease-in-out infinite reverse}
 @keyframes float{50%{transform:translateY(12px)}}
 .hero .greet{font-size:22px;font-weight:800;letter-spacing:-.02em}
+@media (max-width:640px){.hero .greet{font-size:19px}.hero .ring{width:72px;height:72px}}
 .hero .date{opacity:.85;font-size:13.5px;margin-top:3px}
 .hero .stat{display:flex;gap:18px;margin-top:12px;font-size:12.5px}
 .hero .stat b{display:block;font-size:17px}
@@ -338,6 +340,55 @@ kbd{font:11px Inter;border:1px solid var(--line2);border-bottom-width:2px;border
 .prow:last-child{border-bottom:0}
 .toast.act{pointer-events:auto;display:flex;align-items:center;gap:12px}
 .toast.act button{border:0;background:var(--accent);color:#fff;border-radius:8px;padding:4px 10px;font-weight:600;cursor:pointer}
+
+/* home top row + cards */
+.crumb{margin:-2px 0 4px -10px}
+.phone-only{display:none}
+@media (max-width:899px){.phone-only{display:inline-flex}}
+.toprow{display:grid;grid-template-columns:1fr;gap:14px;margin-bottom:26px}
+@media (min-width:900px){.toprow{grid-template-columns:minmax(230px,1fr) minmax(0,1.5fr) minmax(230px,1fr)}.toprow .hero{margin:0}}
+.tcard{display:flex;flex-direction:column;gap:8px;min-height:160px;position:relative;overflow:hidden;cursor:pointer;transition:transform .25s var(--spring),box-shadow .25s}
+.tcard:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+.tcard .lbl{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.train{background:linear-gradient(160deg,#111827,#1f2937 60%,#064e3b);color:#e5e7eb;border-color:transparent}
+.train::after{content:"";position:absolute;right:-40px;bottom:-60px;width:180px;height:180px;border-radius:50%;background:rgba(52,211,153,.12)}
+.train .lbl{color:#9ca3af}.train .ring text{fill:#fff}.train .ring .bg{stroke:rgba(255,255,255,.14)}.train .ring{--lc:#34d399}.train .ring.full .fg{stroke:#34d399}
+.train .big{font-size:34px;font-weight:800;line-height:1;color:#fff}
+.train .next{font-size:12.5px;color:#cbd5e1;line-height:1.4}.train .next b{color:#fff}
+.train a{color:#a7f3d0;display:inline-flex;align-items:center;gap:4px;margin-top:auto;position:relative;z-index:1}
+.goal{padding:8px 0;border-bottom:1px solid var(--line)}.goal:last-child{border-bottom:0}
+.goal .gh{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;min-width:0}
+.goal .gh .gt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.goal .gh small{font-weight:500;color:var(--muted);font-size:12px;white-space:nowrap}
+.tcard .goal .gh{flex-wrap:wrap}.tcard .goal .gh small{flex-basis:100%;margin-left:26px;margin-top:-2px}
+.gbar{height:8px;border-radius:99px;background:var(--ring-bg);overflow:hidden;margin-top:6px}
+.gbar i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--lc,var(--accent)),color-mix(in srgb,var(--lc,var(--accent)) 55%,#fff));transition:width .9s var(--ease)}
+.gbar i.done{background:var(--ok)}
+.gbig{padding:14px 4px;cursor:default}.gbig .gh{font-size:16px;font-weight:700}.gbig .gbar{height:10px;margin-top:8px}
+.gctl{display:flex;gap:6px;align-items:center;margin-top:10px;flex-wrap:wrap}.gctl .btn{padding:6px 12px}
+.tiles{display:grid;grid-template-columns:1fr;gap:10px}
+@media (min-width:480px){.tiles{grid-template-columns:1fr 1fr}}
+.tile{display:flex;align-items:center;gap:12px;padding:14px;cursor:pointer;transition:transform .2s var(--spring),box-shadow .2s}
+.tile:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}.tile:active{transform:scale(.98)}
+.tile .ti{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--accent-soft);color:var(--accent);flex:none}
+.tile .ti .ic{width:22px;height:22px}
+.tile .tt{flex:1;min-width:0}.tile b{display:block;font-size:15px}.tile span{font-size:12.5px;color:var(--muted);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .chev{color:var(--muted)}
+/* calendar + preset panel */
+.cal-layout{display:grid;grid-template-columns:1fr;gap:16px}
+.cal-main{min-width:0}
+.ppanel{display:none}
+@media (min-width:900px){
+  .cal-layout{grid-template-columns:minmax(0,1fr) 236px}
+  .presets{display:none}
+  .ppanel{display:flex;flex-direction:column;gap:8px;position:sticky;top:20px;max-height:calc(100vh - 40px);overflow:auto;padding:14px;align-self:start}
+  .ppanel .lbl{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+  .ppanel .pchip{width:100%;align-items:flex-start;padding:9px 12px}
+  .ppanel .pchip small{font-size:11px}
+}
+@media (max-width:899px){.presets{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}.presets::-webkit-scrollbar{display:none}.presets .pchip,.presets .btn{flex:none}}
+.emojis{max-height:170px;overflow:auto;padding:2px}
+.bak{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}.bak:last-child{border-bottom:0}
 @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
 </head>
@@ -355,8 +406,9 @@ kbd{font:11px Inter;border:1px solid var(--line2);border-bottom-width:2px;border
 <div id="toasts"></div>
 <script>
 {
-const APP_VERSION = "0.4.0";
+const APP_VERSION = "0.5.0";
 const CHANGELOG = [
+  "0.5.0 Goals section + Goals card top-right on Home; Training card top-left fed by V6 Trainer; presets panel on the right of the calendar; phone gets its own tabs again with a compact Home; Home button on every page; Sora headings + dotted background; Halloween emojis + any emoji; automatic local backups on every update",
   "0.4.0 calendar: month / week / day / year views with a time grid and now-line; shift presets (Open CI, Close CI, Open FD, Close FD) you arm and drop onto days; undo toasts",
   "0.3.0 tap a row to tick it, rename only on the word; Lists folded into Home; price bot every N minutes with a monthly search budget",
   "0.2.0 redesign: new look, sidebar + glass tab bar, animated rings, drawn checkmarks, drag to reorder, list colors + icons, bottom sheets, confetti, in-place updates, fixed back button",
@@ -399,10 +451,13 @@ const I = {   /* icons */
   bell: '<svg class="ic" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg>',
   down: '<svg class="ic" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>',
   check: '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  target: '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>',
+  home: '<svg class="ic" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v9a2 2 0 0 1-2 2h-4v-7H9v7H5a2 2 0 0 1-2-2z"/></svg>',
+  flame: '<svg class="ic" viewBox="0 0 24 24"><path d="M12 22c4.4 0 7-3 7-7 0-4-3-6-3-9-2 1-3 3-3 5-1-1-2-3-1-6-4 2-7 6-7 10 0 4 2.6 7 7 7z"/></svg>',
 };
 const ILL = { list: '<svg viewBox="0 0 64 64"><rect x="12" y="8" width="40" height="48" rx="6"/><path d="M20 22h24M20 32h24M20 42h14"/></svg>', cal: '<svg viewBox="0 0 64 64"><rect x="8" y="12" width="48" height="42" rx="6"/><path d="M8 24h48M20 8v8M44 8v8"/><circle cx="32" cy="38" r="5"/></svg>', cart: '<svg viewBox="0 0 64 64"><path d="M8 14h6l6 28h28l6-18H18"/><circle cx="24" cy="52" r="3"/><circle cx="46" cy="52" r="3"/></svg>' };
 const COLORS = ["#6366f1", "#3b82f6", "#14b8a6", "#22c55e", "#f59e0b", "#f97316", "#ef4444", "#ec4899", "#a855f7", "#64748b"];
-const EMOJIS = ["📝", "🛒", "🎯", "📚", "🏋️", "🧗", "🧹", "💼", "🎮", "✈️", "💡", "🍳", "🎁", "🏠", "💻", "🎓"];
+const EMOJIS = ["📝", "🛒", "🎯", "📚", "🏋️", "🧗", "🧹", "💼", "🎮", "✈️", "💡", "🍳", "🎁", "🏠", "💻", "🎓", "🎃", "👻", "🦇", "🕷️", "🕸️", "🧙", "🧛", "🧟", "💀", "🍬", "🍭", "⚰️", "🔮", "🧪", "🎭", "🎄", "🎅", "❄️", "🦃", "🎆", "💪", "🏃", "🚗", "🎵", "📷", "🧳", "🐶", "🐱", "💊", "🩺", "💸", "🏦", "🎂", "🍕", "☕", "🧰", "🪴", "📦", "🧼", "👕", "🎒", "⛺", "🚲", "🏀"];
 const ACCENTS = { indigo: ["#6366f1", "#8b5cf6"], blue: ["#3b82f6", "#06b6d4"], teal: ["#14b8a6", "#22c55e"], rose: ["#f43f5e", "#f97316"], amber: ["#f59e0b", "#ef4444"], violet: ["#a855f7", "#ec4899"] };
 
 function toast(msg, ms = 2600, action) {
@@ -603,10 +658,71 @@ function checkReminders() {
 setInterval(checkReminders, 30000);
 setInterval(() => { const n = $("#view .now"); if (n) { const t = new Date(); n.style.top = ((t.getHours() * 60 + t.getMinutes() - START_H * 60) / 60 * HOUR_PX) + "px"; } }, 60000);
 
+
+/* ---------- goals ---------- */
+const goals = () => all("goal:").sort((a, b) => ((a.done ? 1 : 0) - (b.done ? 1 : 0)) || ((a.due || "9999") < (b.due || "9999") ? -1 : 1) || ((a.created || 0) - (b.created || 0)));
+const goalPct = g => g.done ? 1 : g.target ? Math.min(1, (g.current || 0) / g.target) : 0;
+const fmtNum = n => Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
+const goalMeta = g => `${g.target ? `${fmtNum(g.current)} / ${fmtNum(g.target)}${g.unit ? " " + esc(g.unit) : ""}` : g.done ? "done" : "in progress"}${g.due && !g.done ? ` · ${relDay(g.due)}` : ""}`;
+const goalRow = (g, big) => `<div class="goal${big ? " gbig" : ""}" data-goal="${g.id}" style="--lc:${g.color || COLORS[0]}"><div class="gh"><span>${g.emoji || "🎯"}</span><span class="gt${g.done ? " muted" : ""}">${esc(g.title)}</span><small>${goalMeta(g)}</small></div><div class="gbar"><i class="${g.done ? "done" : ""}" data-w="${goalPct(g) * 100}"></i></div>${big ? `<div class="gctl">${g.target ? `<button class="btn" data-act="gdec">−${fmtNum(g.step || 1)}</button><button class="btn primary" data-act="ginc">+${fmtNum(g.step || 1)}</button>` : ""}<button class="btn ghost" data-act="gdone">${g.done ? "Reopen" : "Mark done"}</button><span class="sp"></span><button class="btn ghost icon" data-act="gedit">${I.edit}</button></div>` : ""}</div>`;
+const goalsCard = () => { const gs = goals().filter(g => !g.done).slice(0, 3), n = goals().length; return `<div class="card tcard" data-go="#goals"><div class="lbl">Goals</div>${gs.map(g => goalRow(g)).join("") || `<div class="muted small" style="padding:8px 0">No goals yet. Tap to add one.</div>`}<div class="small muted" style="margin-top:auto">${n ? `${goals().filter(g => g.done).length}/${n} reached · ` : ""}tap to manage</div></div>`; };
+function updateGoalRow(el, g) { $(".gh small", el).innerHTML = goalMeta(g); const i = $(".gbar i", el); i.style.width = goalPct(g) * 100 + "%"; i.classList.toggle("done", !!g.done); $(".gt", el).classList.toggle("muted", !!g.done); const bd = $("[data-act=gdone]", el); if (bd) bd.textContent = g.done ? "Reopen" : "Mark done"; }
+const goalsView = () => {
+  const gs = goals(), done = gs.filter(g => g.done).length;
+  return `${topbar("Goals", `${gs.length - done} active`, ring(done, gs.length, 56))}
+  <div class="card"><form class="addrow wishadd" data-act="addGoal" style="margin:0 0 8px"><input class="in" placeholder="New goal, e.g. Climb V6" autocomplete="off"><input class="in" type="number" step="any" placeholder="Target" style="width:auto;max-width:110px"><button class="btn primary">${I.plus}Add</button></form>
+  <div id="goalRows">${gs.map(g => goalRow(g, true)).join("") || emptyBox("list", "No goals yet. Add one above, then tap + each time you make progress.")}</div></div>
+  <p class="small muted" style="margin-top:10px">A goal with a target counts up (sets, pages, dollars…). A goal without one is just done or not.</p>`;
+};
+function goalForm(g = {}) {
+  const v = { title: "", emoji: "🎯", target: "", current: 0, unit: "", step: 1, due: "", color: COLORS[(goals().length) % COLORS.length], note: "", ...g };
+  const b = sheet(`<h3>${g.id ? "Edit goal" : "New goal"}</h3>
+    <label class="field">Goal</label><input class="in" name="title" value="${esc(v.title)}" placeholder="Climb V6">
+    <div class="two"><div><label class="field">Target (blank = done/not done)</label><input class="in" type="number" step="any" name="target" value="${v.target}"></div><div><label class="field">Current</label><input class="in" type="number" step="any" name="current" value="${v.current}"></div></div>
+    <div class="two"><div><label class="field">Unit</label><input class="in" name="unit" value="${esc(v.unit)}" placeholder="sessions, $, pages"></div><div><label class="field">Step per tap</label><input class="in" type="number" step="any" name="step" value="${v.step}"></div></div>
+    <div class="two"><div><label class="field">Due</label><input class="in" type="date" name="due" value="${v.due}"></div><div><label class="field">Icon</label><input class="in" name="emoji" value="${esc(v.emoji)}" maxlength="8"></div></div>
+    <label class="field">Color</label><div class="swatches">${COLORS.map(c => `<div class="sw${v.color === c ? " on" : ""}" style="background:${c}" data-c="${c}"></div>`).join("")}</div>
+    <div class="row" style="margin-top:16px">${g.id ? '<button class="btn ghost danger" data-act="gdel">Delete</button>' : ""}<span class="sp"></span><button class="btn ghost" data-act="close">Cancel</button><button class="btn primary" data-act="gsave">Save</button></div>`);
+  let color = v.color;
+  b.addEventListener("click", async e => {
+    const sw = e.target.closest("[data-c]"); if (sw) { color = sw.dataset.c; $$(".sw", b).forEach(x => x.classList.toggle("on", x === sw)); return; }
+    const act = e.target.closest("[data-act]")?.dataset.act;
+    if (act === "gdel") { if (await ask("Delete goal?", v.title)) { del(g.id); b.close(); } }
+    if (act === "gsave") {
+      const f = {}; $$("[name]", b).forEach(i => f[i.name] = i.value.trim()); if (!f.title) return toast("Name the goal");
+      f.target = f.target === "" ? "" : Number(f.target); f.current = Number(f.current) || 0; f.step = Number(f.step) || 1;
+      put(g.id || "goal:" + uid(), { ...v, ...f, color, done: g.done || false, created: v.created || Date.now() }); b.close();
+    }
+  });
+}
+/* ---------- training card (V6 Trainer summary row) ---------- */
+const V6 = { data: lsGet("v6today", null) };
+const v6url = () => PREF().v6url || "https://papaya-naiad-8d2bee.netlify.app";
+async function fetchV6() {
+  const c = SYNC.cfg, sec = PREF().v6secret; if (!c?.url || !c.key || !sec || !navigator.onLine) return;
+  try {
+    const r = await fetch(c.url.replace(/\/+$/, "") + "/rest/v1/v6_docs?select=data&id=eq.today", { headers: { apikey: c.key, Authorization: "Bearer " + c.key, "x-v6-secret": sec } });
+    if (!r.ok) throw new Error(r.status);
+    const rows = await r.json(); const d = rows[0]?.data || null;
+    if (JSON.stringify(d) !== JSON.stringify(V6.data)) { V6.data = d; lsSet("v6today", d); const el = $("#trainCard"); if (el) { el.outerHTML = trainingCard(); animateRings($("#trainCard")); } }
+    V6.err = "";
+  } catch (e) { V6.err = String(e.message || e); }
+}
+function trainingCard() {
+  const p = PREF(), d = V6.data; let body;
+  if (!p.v6secret) body = `<div class="next">Add your V6 Trainer secret word in Settings and today's sets show up here.</div>`;
+  else if (!d || d.date !== today()) body = `<div class="big">—</div><div class="next">${d ? "Last summary " + fmtDate(d.date) : "No summary yet"}. Open V6 once today and it publishes.${V6.err ? " <span class='muted'>(" + esc(V6.err) + ")</span>" : ""}</div>`;
+  else if (d.state === "off" || d.state === "skip") body = `<div class="big">Rest</div><div class="next">${d.state === "skip" ? "Skipped today" : "Nothing planned today"}</div>`;
+  else { const left = Math.max(0, d.need - d.done); body = `<div class="row"><div><div class="big">${left}</div><div class="next">${left === 1 ? "set" : "sets"} left of ${d.need}</div></div><span class="sp"></span>${ring(d.done, d.need, 64)}</div><div class="next">${d.next ? `Next: <b>${esc(d.next.name)}</b> · set ${d.next.set} of ${d.next.sets}` : "🎉 All sets done"}</div>`; }
+  return `<div class="card tcard train" id="trainCard" data-href="${esc(v6url())}"><div class="lbl">Training · V6</div>${body}<a href="${esc(v6url())}" target="_blank" rel="noopener" class="small">Open V6 Trainer ${I.ext}</a></div>`;
+}
+
 /* ---------- views ---------- */
 const PREF = () => lsGet("pref", {});
 const V = {};
-const topbar = (title, sub, right = "") => `<div class="topbar"><div><h1>${title}</h1>${sub ? `<div class="sub">${sub}</div>` : ""}</div><span class="sp"></span>${right}</div>`;
+V.goals = goalsView;
+const homeBtn = () => `<button class="btn ghost" data-go="#dash">${I.back} Home</button>`;
+const topbar = (title, sub, right = "") => `${route().name !== "dash" ? `<div class="crumb">${homeBtn()}</div>` : ""}<div class="topbar"><div><h1>${title}</h1>${sub ? `<div class="sub">${sub}</div>` : ""}</div><span class="sp"></span>${right}</div>`;
 const emptyBox = (ill, text) => `<div class="empty"><div class="ill">${ILL[ill]}</div>${text}</div>`;
 const listCard = (l, i) => { const { t, d } = listStats(l), open = l.items.filter(x => !x.done).slice(0, 4);
   return `<div class="card sq" style="--lc:${l.color || COLORS[0]};--i:${i}" data-go="#list/${l.id.slice(5)}"><div class="emoji">${l.emoji || "📝"}</div><h3>${esc(l.title)}</h3>
@@ -614,21 +730,27 @@ const listCard = (l, i) => { const { t, d } = listStats(l), open = l.items.filte
   <div class="foot"><span><b>${d}</b>/${t}</span>${ring(d, t, 54)}</div></div>`; };
 
 V.dash = () => {
-  const ls = lists(), w = wishItems(), wd = w.filter(i => i.done).length, name = PREF().name;
+  const ls = lists(), w = wishItems(), wd = w.filter(i => i.done).length, name = PREF().name, phone = isPhone();
   const h = new Date().getHours(), greet = h < 5 ? "Still up" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
   const tot = ls.reduce((a, l) => a + l.items.length, 0), done = ls.reduce((a, l) => a + l.items.filter(i => i.done).length, 0);
   const tod = occurrences(today(), today()), up = occurrences(addDays(today(), 1), addDays(today(), 7)).slice(0, 5);
-  let o = `<div class="hero"><div class="sp"><div class="greet">${greet}${name ? ", " + esc(name) : ""} 👋</div><div class="date">${new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</div>
-    <div class="stat"><div><b>${tod.length}</b>today</div><div><b>${tot - done}</b>open tasks</div><div><b>${w.length - wd}</b>to buy</div></div></div>${ring(done, tot, 84, "lg")}</div>`;
-  o += `<section><div class="sec-h"><h2>Today</h2><span class="n">${fmtDate(today(), { weekday: "long" })}</span><span class="sp"></span><button class="btn ghost" data-go="#cal">Calendar ${I.chev}</button></div><div class="card" style="padding:8px 10px">`;
-  o += tod.length ? tod.map(({ ev, date }) => evRow(ev, date, true)).join("") : `<div class="empty" style="padding:18px">Nothing scheduled today.</div>`;
-  if (up.length) o += `<div class="agenda"><div class="dh">Next up</div>${up.map(({ ev, date }) => evRow(ev, date, true)).join("")}</div>`;
-  o += `</div></section><section><div class="sec-h"><h2>Lists</h2><span class="n">${done}/${tot} done</span></div><div class="grid">`;
-  o += ls.map(listCard).join("");
-  const due = w.filter(i => !i.done && i.by).slice(0, 3);
-  o += `<div class="card sq" style="--lc:#f59e0b;--i:${ls.length}" data-go="#wish"><div class="emoji">🛍️</div><h3>Wishlist</h3><div class="mini">${due.map(i => `<div>${esc(i.name)} · ${relDay(i.by)}</div>`).join("") || (w.length ? `<div>${w.length - wd} to buy</div>` : '<span class="chip grey">Empty</span>')}</div><div class="foot"><span><b>${wd}</b>/${w.length}</span>${ring(wd, w.length, 54)}</div></div>`;
-  o += `<div class="card sq add" style="--i:${ls.length + 1}" data-act="newlist">${I.plus}New list</div></div></section>`;
-  return o;
+  const hero = `<div class="hero"><div class="sp" style="min-width:0"><div class="row"><div class="greet">${greet}${name ? ", " + esc(name) : ""} 👋</div><span class="sp"></span><button class="btn ghost icon phone-only" data-go="#settings" style="color:#fff" title="Settings">${I.cog}</button></div><div class="date">${new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</div>
+    <div class="stat"><div><b>${tod.length}</b>today</div><div><b>${tot - done}</b>open tasks</div><div><b>${w.length - wd}</b>to buy</div></div></div>${ring(done, tot, phone ? 84 : 76, "lg")}</div>`;
+  const todayCard = `<section><div class="sec-h"><h2>Today</h2><span class="n">${fmtDate(today(), { weekday: "long" })}</span><span class="sp"></span><button class="btn ghost" data-go="#cal">Calendar ${I.chev}</button></div><div class="card" style="padding:8px 10px">${tod.length ? tod.map(({ ev, date }) => evRow(ev, date, true)).join("") : `<div class="empty" style="padding:18px">Nothing scheduled today.</div>`}${up.length ? `<div class="agenda"><div class="dh">Next up</div>${up.map(({ ev, date }) => evRow(ev, date, true)).join("")}</div>` : ""}</div></section>`;
+  if (!phone) {
+    let o = `<div class="toprow">${trainingCard()}${hero}${goalsCard()}</div>` + todayCard;
+    o += `<section><div class="sec-h"><h2>Lists</h2><span class="n">${done}/${tot} done</span><span class="sp"></span><button class="btn ghost" data-go="#lists">All lists ${I.chev}</button></div><div class="grid">${ls.map(listCard).join("")}`;
+    const due = w.filter(i => !i.done && i.by).slice(0, 3);
+    o += `<div class="card sq" style="--lc:#f59e0b;--i:${ls.length}" data-go="#wish"><div class="emoji">🛍️</div><h3>Wishlist</h3><div class="mini">${due.map(i => `<div>${esc(i.name)} · ${relDay(i.by)}</div>`).join("") || (w.length ? `<div>${w.length - wd} to buy</div>` : '<span class="chip grey">Empty</span>')}</div><div class="foot"><span><b>${wd}</b>/${w.length}</span>${ring(wd, w.length, 54)}</div></div>`;
+    o += `<div class="card sq add" style="--i:${ls.length + 1}" data-act="newlist">${I.plus}New list</div></div></section>`;
+    return o;
+  }
+  const nextDue = w.filter(i => !i.done && i.by)[0], nextEv = up[0];
+  return hero + `<section><div class="tiles">${trainingCard()}${goalsCard()}</div></section>` + todayCard + `<section><div class="sec-h"><h2>Sections</h2></div><div class="tiles">
+    <div class="card tile" data-go="#lists"><div class="ti">${I.list}</div><div class="tt"><b>Lists</b><span>${ls.length} lists · ${tot - done} open</span></div>${I.chev.replace('class="ic"', 'class="ic chev"')}</div>
+    <div class="card tile" data-go="#wish"><div class="ti">${I.cart}</div><div class="tt"><b>Wishlist</b><span>${w.length - wd} to buy${nextDue ? " · " + esc(nextDue.name) + " " + relDay(nextDue.by) : ""}</span></div>${I.chev.replace('class="ic"', 'class="ic chev"')}</div>
+    <div class="card tile" data-go="#cal"><div class="ti">${I.cal}</div><div class="tt"><b>Calendar</b><span>${nextEv ? esc(nextEv.ev.title) + " · " + fmtDate(nextEv.date, { weekday: "short" }) + " " + fmtTime(nextEv.ev.start) : "nothing in the next week"}</span></div>${I.chev.replace('class="ic"', 'class="ic chev"')}</div>
+    <div class="card tile" data-go="#settings"><div class="ti">${I.cog}</div><div class="tt"><b>Settings</b><span>${SYNC.cfg ? SYNC.msg : "not synced"}</span></div>${I.chev.replace('class="ic"', 'class="ic chev"')}</div></div></section>`;
 };
 V.lists = () => `${topbar("Lists", `${lists().length} lists`)}<div class="grid">${lists().map(listCard).join("")}<div class="card sq add" style="--i:${lists().length}" data-act="newlist">${I.plus}New list</div></div>`;
 const itemRow = it => `<div class="item${it.done ? " done" : ""}" data-item="${it.id}"><span class="grip">${I.grip}</span><button class="chk" role="checkbox" aria-checked="${!!it.done}" data-act="tick">${I.check}</button><div class="txt" contenteditable="true" spellcheck="false" data-act="text">${esc(it.text)}</div><span class="fill"></span><button class="x" data-act="delItem" title="Remove">${I.x}</button></div>`;
@@ -740,13 +862,14 @@ function yearView() {
 }
 V.cal = () => {
   const ps = presets(), armed = ps.find(p => p.id === CAL.armed);
-  let o = `<div class="cal-h"><button class="btn ghost icon" data-act="calPrev">${I.back}</button><h2>${calTitle()}</h2><button class="btn ghost icon" data-act="calNext">${I.chev}</button><button class="btn ghost" data-act="calToday">Today</button><span class="sp"></span>
+  const pchip = p => `<button class="pchip${CAL.armed === p.id ? " on" : ""}" data-preset="${p.id}">${esc(p.name)}<small>${fmtTime(p.start)} – ${fmtTime(p.end)}</small></button>`;
+  let o = `<div class="crumb">${homeBtn()}</div><div class="cal-h"><button class="btn ghost icon" data-act="calPrev">${I.back}</button><h2>${calTitle()}</h2><button class="btn ghost icon" data-act="calNext">${I.chev}</button><button class="btn ghost" data-act="calToday">Today</button><span class="sp"></span>
     <div class="seg views">${[["month", "Month"], ["week", "Week"], ["day", "Day"], ["year", "Year"]].map(([v, t]) => `<button class="${CAL.view === v ? "on" : ""}" data-view="${v}">${t}</button>`).join("")}</div>
     <button class="btn ghost icon" data-act="ics" title="Download .ics">${I.down}</button><button class="btn primary" data-act="newEvent" style="display:none" id="newEvDesk">${I.plus}Event</button></div>`;
-  o += `<div class="presets">${ps.map(p => `<button class="pchip${CAL.armed === p.id ? " on" : ""}" data-preset="${p.id}">${esc(p.name)}<small>${fmtTime(p.start)} – ${fmtTime(p.end)}</small></button>`).join("")}<button class="btn ghost" data-act="managePresets">${I.edit} Presets</button></div>`;
+  o += `<div class="presets">${ps.map(pchip).join("")}<button class="btn ghost" data-act="managePresets">${I.edit} Presets</button></div>`;
   if (armed) o += `<div class="armed-note">${I.cal} Tap days to add <b>&nbsp;${esc(armed.name)}&nbsp;</b> · ${fmtTime(armed.start)} – ${fmtTime(armed.end)}<span class="sp"></span><button class="btn ghost" data-act="disarm" style="padding:4px 10px">Done</button></div>`;
   const view = CAL.view === "month" ? monthView() : CAL.view === "week" ? timeGrid([...Array(7)].map((_, i) => addDays(weekStart(CAL.anchor), i))) : CAL.view === "day" ? timeGrid([CAL.anchor]) : yearView();
-  o += `<div class="cal-wrap"><div class="calview ${CAL.dir}">${view}</div></div>`;
+  o += `<div class="cal-layout"><div class="cal-main"><div class="cal-wrap"><div class="calview ${CAL.dir}">${view}</div></div>`;
   CAL.dir = "";
   if (CAL.view === "month" || CAL.view === "year") {
     const up = occurrences(today(), addDays(today(), 30)), groups = {}; up.forEach(x => (groups[x.date] ||= []).push(x));
@@ -754,7 +877,8 @@ V.cal = () => {
     o += up.length ? Object.entries(groups).map(([d, xs]) => `<div class="dh${d === today() ? " today" : ""}">${d === today() ? "Today" : d === addDays(today(), 1) ? "Tomorrow" : fmtDate(d, { weekday: "long", month: "short", day: "numeric" })}</div>${xs.map(({ ev, date }) => evRow(ev, date)).join("")}`).join("") : emptyBox("cal", "No upcoming events. Tap + to add one.");
     o += `</div></section>`;
   }
-  o += `<p class="small muted" style="margin-top:12px">Tap a preset, then tap days to drop that shift in. In week or day view, tap an empty hour to start a new event there. Reminders fire while Hub is open; for guaranteed phone alerts open an event and tap Google Calendar.</p>`;
+  o += `<p class="small muted" style="margin-top:12px">Tap a preset, then tap days to drop that shift in. In week or day view, tap an empty hour to start a new event there. Reminders fire while Hub is open; for guaranteed phone alerts open an event and tap Google Calendar.</p></div>
+  <aside class="card ppanel"><div class="lbl">Shift presets</div>${ps.map(pchip).join("") || '<div class="muted small">None yet</div>'}<button class="btn ghost" data-act="managePresets" style="margin-top:4px">${I.edit} Edit presets</button>${armed ? `<button class="btn" data-act="disarm">Done placing</button>` : ""}</aside></div>`;
   return o;
 };
 function calDayClick(e, el) {
@@ -850,14 +974,15 @@ function listStyleForm(id) {
   const b = sheet(`<h3>List style</h3>
     <label class="field">Name</label><input class="in" name="title" value="${esc(l.title)}">
     <label class="field">Icon</label><div class="emojis">${EMOJIS.map(e => `<div class="em${l.emoji === e ? " on" : ""}" data-em="${e}">${e}</div>`).join("")}</div>
+    <input class="in" name="emoji" maxlength="8" placeholder="or type any emoji here" style="margin-top:8px">
     <label class="field">Color</label><div class="swatches">${COLORS.map(c => `<div class="sw${l.color === c ? " on" : ""}" style="background:${c}" data-c="${c}"></div>`).join("")}</div>
     <div class="row" style="margin-top:18px"><span class="sp"></span><button class="btn ghost" data-act="close">Cancel</button><button class="btn primary" data-act="save">Save</button></div>`);
   let emoji = l.emoji, color = l.color;
   b.addEventListener("click", e => {
     const em = e.target.closest("[data-em]"), sw = e.target.closest("[data-c]");
-    if (em) { emoji = em.dataset.em; $$(".em", b).forEach(x => x.classList.toggle("on", x === em)); }
+    if (em) { emoji = em.dataset.em; $("[name=emoji]", b).value = ""; $$(".em", b).forEach(x => x.classList.toggle("on", x === em)); }
     if (sw) { color = sw.dataset.c; $$(".sw", b).forEach(x => x.classList.toggle("on", x === sw)); }
-    if (e.target.closest("[data-act=save]")) { patch(id, d => { d.title = $("[name=title]", b).value.trim() || d.title; d.emoji = emoji; d.color = color; }); b.close(); }
+    if (e.target.closest("[data-act=save]")) { const typed = $("[name=emoji]", b).value.trim(); patch(id, d => { d.title = $("[name=title]", b).value.trim() || d.title; d.emoji = typed || emoji; d.color = color; }); b.close(); }
   });
 }
 V.settings = () => {
@@ -872,6 +997,10 @@ V.settings = () => {
     <label class="field">Anon key</label><input class="in" id="sKey" value="${esc(c.key || "")}" placeholder="eyJ…">
     <label class="field">Secret word (the one in setup.sql)</label><input class="in" id="sSecret" type="password" value="${esc(c.secret || "")}">
     <div class="row" style="margin-top:12px"><button class="btn primary" data-act="connect">${SYNC.cfg ? "Reconnect" : "Connect"}</button>${SYNC.cfg ? '<button class="btn ghost danger" data-act="disconnect">Disconnect</button>' : ""}</div></div>
+  <div class="card"><h3>V6 Trainer</h3><p class="small muted" style="margin:2px 0 4px">Shows today's sets on Home. Uses the same Supabase project as sync above, plus the V6 secret word from the V6 app's own Settings.</p>
+    <label class="field">V6 secret word</label><input class="in" id="v6Secret" type="password" value="${esc(p.v6secret || "")}">
+    <label class="field">V6 web app link (opens from the Training card)</label><input class="in" id="v6Url" value="${esc(p.v6url || "")}" placeholder="https://papaya-naiad-8d2bee.netlify.app">
+    <div class="row" style="margin-top:12px"><button class="btn primary" data-act="saveV6">Save</button><span class="small muted">${V6.data ? "Last summary: " + fmtDate(V6.data.date) + (V6.data.need != null ? `, ${V6.data.done}/${V6.data.need} sets` : "") : "No summary received yet"}</span></div></div>
   <div class="card"><h3>Reminders</h3><p class="small muted" style="margin:2px 0 8px">Status: <b>${window.Notification ? Notification.permission : "not supported here"}</b>. On iPhone, notifications only work after adding Hub to the home screen.</p>
     <div class="row"><button class="btn" data-act="notifOn">${I.bell} Enable notifications</button><button class="btn ghost" data-act="notifTest">Test</button></div></div>
   <div class="card"><h3>Price bot</h3><p class="small muted" style="margin:2px 0 4px">A script (<code>pricebot/price_check.py</code>) runs on a schedule, reads the wishlist from Supabase and writes the cheapest trusted offers back. These settings are read by the bot.${meta?.ran_at ? " Last run " + new Date(meta.ran_at).toLocaleString() + "." : ""}</p>
@@ -880,20 +1009,24 @@ V.settings = () => {
     <p class="small muted" style="margin:8px 0 0">The bot wakes every 15 minutes. Each item is searched again only after the re-check interval, and the bot stops for the month once the budget is used (SerpApi free tier = 100 searches a month).${meta?.month_used != null ? ` Used this month: <b>${meta.month_used}</b>.` : ""}</p>
     <label class="field">Trusted stores (one per line)</label><textarea id="pbStores" rows="5">${esc((pb.stores || DEFAULT_STORES).join("\n"))}</textarea>
     <div class="row" style="margin-top:12px"><button class="btn primary" data-act="savePb">Save</button></div></div>
-  <div class="card"><h3>Data</h3><div class="row wrap" style="margin-top:8px"><button class="btn" data-act="export">${I.down} Export JSON</button><button class="btn" data-act="import">Import JSON</button><button class="btn ghost danger" data-act="wipe">Wipe this device</button></div>
+  <div class="card"><h3>Data</h3><div class="row wrap" style="margin-top:8px"><button class="btn" data-act="export">${I.down} Export JSON</button><button class="btn" data-act="import">Import JSON</button><button class="btn" data-act="bakNow">Back up now</button><button class="btn ghost danger" data-act="wipe">Wipe this device</button></div>
+    <p class="small muted" style="margin:10px 0 4px">Automatic backups on this device (one is taken before every app update; the newest three are kept). Synced data also lives on the server.</p>
+    <div>${lsGet("bak", []).map((b, i) => `<div class="bak"><span class="sp">${esc(b.v)} · ${new Date(b.at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} · ${Object.keys(b.docs || {}).length} records</span><button class="btn ghost" data-act="bakRestore" data-i="${i}">Restore</button></div>`).join("") || '<div class="small muted">No backups yet.</div>'}</div>
     <p class="small muted" style="margin:12px 0 0">Hub v${APP_VERSION} · ${/iPhone|iPad/.test(navigator.userAgent) ? "iOS" : navigator.platform} · ${matchMedia("(display-mode: standalone)").matches ? "installed app" : "browser tab"}<br><details><summary>Changelog</summary>${CHANGELOG.map(l => `<div>${esc(l)}</div>`).join("")}</details></p></div></div>`;
 };
 const DEFAULT_STORES = ["Amazon.com", "Walmart", "Target", "Best Buy", "Costco", "Home Depot", "Lowe's", "B&H Photo", "Newegg", "Micro Center", "REI", "Dick's Sporting Goods", "Apple", "Staples", "Office Depot", "Kohl's", "Macy's", "Nike", "Adidas", "GameStop", "Chewy", "Petco", "Sam's Club", "Academy Sports", "Backcountry"];
 
 /* ---------- router + render ---------- */
-const TABS = [["dash", "Home", I.grid], ["wish", "Wishlist", I.cart], ["cal", "Calendar", I.cal], ["settings", "Settings", I.cog]];
+const TABS = [["dash", "Home", I.grid], ["lists", "Lists", I.list], ["goals", "Goals", I.target], ["wish", "Wishlist", I.cart], ["cal", "Calendar", I.cal], ["settings", "Settings", I.cog]];
+const PHONE_TABS = ["dash", "lists", "goals", "cal", "wish"];
+const isPhone = () => !matchMedia("(min-width:900px)").matches;
 function buildNav() {
-  const html = TABS.map(([k, t, ic]) => `<a href="#${k}" data-t="${k}">${ic}<span>${t}</span></a>`).join("");
-  $("#sideNav").insertAdjacentHTML("beforeend", html); $("#tabbar").insertAdjacentHTML("beforeend", html);
+  const mk = ks => TABS.filter(([k]) => !ks || ks.includes(k)).map(([k, t, ic]) => `<a href="#${k}" data-t="${k}">${ic}<span>${t}</span></a>`).join("");
+  $("#sideNav").insertAdjacentHTML("beforeend", mk()); $("#tabbar").insertAdjacentHTML("beforeend", mk(PHONE_TABS));
 }
-function route() { const h = location.hash.replace(/^#/, "") || "dash"; const [name, ...rest] = h.split("/"); return { name: V[name] && name !== "lists" ? name : "dash", arg: rest.join("/") }; }
+function route() { const h = location.hash.replace(/^#/, "") || "dash"; const [name, ...rest] = h.split("/"); return { name: V[name] ? name : "dash", arg: rest.join("/") }; }
 function moveInd() {
-  const { name } = route(), tab = name === "list" ? "dash" : name;
+  const { name } = route(), tab = name === "list" ? "lists" : name;
   for (const nav of [$("#sideNav"), $("#tabbar")]) {
     const a = $(`a[data-t="${tab}"]`, nav), ind = $(".ind", nav); if (!a) continue;
     if (nav.id === "tabbar") { ind.style.width = a.offsetWidth + "px"; ind.style.transform = `translateX(${a.offsetLeft}px)`; }
@@ -902,7 +1035,7 @@ function moveInd() {
 }
 let lastView = null;
 function render() {
-  const { name, arg } = route(), tab = name === "list" ? "dash" : name;
+  const { name, arg } = route(), tab = name === "list" ? "lists" : name;
   $$("#sideNav a,#tabbar a").forEach(a => a.classList.toggle("on", a.dataset.t === tab));
   const main = $("#view");
   const addIn = $(".addrow input.in", main), keepAdd = addIn && document.activeElement === addIn ? addIn.value : null;
@@ -910,7 +1043,7 @@ function render() {
   if (lastView !== name + "/" + arg) { main.classList.remove("view"); main.offsetHeight; main.classList.add("view"); }
   lastView = name + "/" + arg;
   if (keepAdd != null) { const i = $(".addrow input.in", main); if (i) { i.value = keepAdd; i.focus(); } }
-  animateRings(main); requestAnimationFrame(() => $$(".bar i[data-w]", main).forEach(i => i.style.width = i.dataset.w + "%"));
+  animateRings(main); requestAnimationFrame(() => $$(".bar i[data-w],.gbar i[data-w]", main).forEach(i => i.style.width = i.dataset.w + "%"));
   if (name === "list") dragInit($("#items"), (from, to) => patch("list:" + arg, l => { const [it] = l.items.splice(from, 1); l.items.splice(to, 0, it); }, { quiet: true }));
   const desk = matchMedia("(min-width:900px)").matches;
   if (name === "cal" && desk) $("#newEvDesk").style.display = "";
@@ -918,7 +1051,8 @@ function render() {
   moveInd();
 }
 addEventListener("hashchange", render);
-addEventListener("resize", moveInd);
+let wasPhone = isPhone();
+addEventListener("resize", () => { moveInd(); if (isPhone() !== wasPhone) { wasPhone = isPhone(); render(); } });
 
 /* ---------- drag to reorder ---------- */
 function dragInit(container, onDrop) {
@@ -986,12 +1120,22 @@ document.addEventListener("click", async e => {
   if (act === "notifTest") { if (Notification?.permission !== "granted") return toast("Enable them first"); try { new Notification("Hub", { body: "Reminders work here." }); } catch { navigator.serviceWorker?.ready.then(r => r.showNotification("Hub", { body: "Reminders work here." })); } return; }
   if (act === "savePb") { put("settings:pricebot", { tax_pct: Number($("#pbTax").value) || 0, recheck_minutes: Math.max(15, Number($("#pbMin").value) || 1440), monthly_budget: Math.max(1, Number($("#pbBudget").value) || 95), max_per_run: Math.max(1, Number($("#pbPerRun").value) || 3), stores: $("#pbStores").value.split("\n").map(s => s.trim()).filter(Boolean) }); toast("Saved"); return; }
   if (act === "savePref") { lsSet("pref", { ...PREF(), name: $("#pName").value.trim() }); applyTheme(); toast("Saved"); return; }
+  if (act === "saveV6") { lsSet("pref", { ...PREF(), v6secret: $("#v6Secret").value.trim(), v6url: $("#v6Url").value.trim() }); toast("Saved, fetching…"); fetchV6().then(() => { render(); toast(V6.data ? "V6 connected ✓" : "No summary found yet" + (V6.err ? ": " + V6.err : ""), 4000); }); return; }
+  if (act === "bakNow") { snapshot("manual"); render(); toast("Backed up"); return; }
+  if (act === "bakRestore") { const b = lsGet("bak", [])[+t.dataset.i]; if (!b) return; if (await ask("Restore this backup?", "Replaces the data on this device with the backup and syncs it up. The current data is backed up first.", "Restore")) { snapshot("before restore"); DB.docs = b.docs; Object.keys(DB.docs).forEach(id => DB.pending.add(id)); persist(); schedulePush(); render(); toast("Restored"); } return; }
+  if (act === "gdone" || act === "ginc" || act === "gdec") {
+    const el = t.closest("[data-goal]"), id = el.dataset.goal, g = get(id); if (!g) return;
+    if (act === "gdone") g.done = !g.done; else { g.current = Math.max(0, (Number(g.current) || 0) + (act === "ginc" ? 1 : -1) * (Number(g.step) || 1)); if (g.target && g.current >= g.target && !g.done) { g.done = true; const r = t.getBoundingClientRect(); confetti(r.left + 20, r.top + 10); toast("🎯 Goal reached!"); } }
+    g.doneAt = g.done ? Date.now() : null; put(id, g, { quiet: true }); updateGoalRow(el, g); setRing($("#view .topbar .ring"), goals().filter(x => x.done).length, goals().length); const sub = $("#view .topbar .sub"); if (sub) sub.textContent = `${goals().filter(x => !x.done).length} active`; return;
+  }
+  if (act === "gedit") { const id = t.closest("[data-goal]").dataset.goal; goalForm({ id, ...get(id) }); return; }
   if (act === "theme") { lsSet("theme", t.dataset.v); applyTheme(); render(); return; }
   if (act === "export") { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify({ version: APP_VERSION, docs: DB.docs }, null, 1)], { type: "application/json" })); a.download = "hub-" + today() + ".json"; a.click(); return; }
   if (act === "import") { const i = document.createElement("input"); i.type = "file"; i.accept = ".json"; i.onchange = async () => { try { const j = JSON.parse(await i.files[0].text()); let n = 0; for (const [id, d] of Object.entries(j.docs || {})) { put(id, d.data, { quiet: true }); n++; } render(); toast("Imported " + n + " records"); } catch (err) { toast("Import failed: " + err.message); } }; i.click(); return; }
   if (act === "wipe") { if (await ask("Wipe this device?", "Removes all Hub data from this browser. Synced data stays on the server.", "Wipe")) { localStorage.clear(); location.reload(); } return; }
   const acc = e.target.closest("[data-accent]"); if (acc) { lsSet("pref", { ...PREF(), accent: acc.dataset.accent }); applyTheme(); $$("[data-accent]").forEach(x => x.classList.toggle("on", x === acc)); return; }
   if (act) return;
+  const tc = e.target.closest("#trainCard"); if (tc && !e.target.closest("a")) { open(tc.dataset.href, "_blank", "noopener"); return; }
   const evr = e.target.closest("[data-ev]"); if (evr) { eventForm({ id: evr.dataset.ev, ...get(evr.dataset.ev) }); return; }
   const day = e.target.closest("[data-day]"); if (day) { calDayClick(e, day); return; }
   const go = e.target.closest("[data-go]"); if (go) { location.hash = go.dataset.go; return; }
@@ -1014,6 +1158,11 @@ $("#view").addEventListener("submit", e => {
     $("#emptyItems")?.remove(); $("#items").insertAdjacentHTML("beforeend", itemRow(it)); $("#items").lastElementChild.classList.add("in");
     updateListHeader(get("list:" + route().arg)); inp.value = ""; inp.focus();
   }
+  if (f.dataset.act === "addGoal") {
+    const tgt = $("input[type=number]", f)?.value, id = "goal:" + uid();
+    put(id, { title: v, emoji: "🎯", target: tgt ? Number(tgt) : "", current: 0, unit: "", step: 1, due: "", color: COLORS[goals().length % COLORS.length], done: false, created: Date.now() }, { quiet: true });
+    render(); $(`[data-goal="${id}"]`)?.classList.add("in"); $(".addrow input.in", $("#view"))?.focus();
+  }
   if (f.dataset.act === "addWish") {
     const by = $("input[type=date]", f)?.value || "", id = "wish:" + uid();
     put(id, { name: v, by, qty: 1, budget: "", note: "", done: false, created: Date.now() }, { quiet: true });
@@ -1028,7 +1177,7 @@ $("#view").addEventListener("keydown", e => {
 $("#view").addEventListener("paste", e => { if (e.target.dataset?.act === "text") { e.preventDefault(); document.execCommand("insertText", false, (e.clipboardData.getData("text/plain") || "").replace(/\n+/g, " ")); } });
 document.addEventListener("keydown", e => {
   if (e.target.matches("input,textarea,[contenteditable]") || e.metaKey || e.ctrlKey || e.altKey) return;
-  const map = { 1: "#dash", 2: "#wish", 3: "#cal", 4: "#settings" };
+  const map = { 1: "#dash", 2: "#lists", 3: "#goals", 4: "#wish", 5: "#cal", 6: "#settings" };
   if (map[e.key]) location.hash = map[e.key];
   if (e.key === "n" && route().name === "cal") eventForm({});
   if (route().name === "cal") { const vm = { m: "month", w: "week", d: "day", y: "year" }; if (vm[e.key]) setView(vm[e.key]); if (e.key === "Escape" && CAL.armed) { CAL.armed = null; render(); } if (e.key === "ArrowLeft") calMove(-1); if (e.key === "ArrowRight") calMove(1); }
@@ -1058,8 +1207,12 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", applyThe
 if (!Object.keys(DB.docs).length && !SYNC.cfg) {
   put("list:" + uid(), { title: "Groceries", emoji: "🛒", color: "#22c55e", items: [{ id: uid(), text: "Eggs", done: false }, { id: uid(), text: "Milk", done: true }, { id: uid(), text: "Coffee", done: false }], created: Date.now(), order: 0 }, { quiet: true });
 }
+function snapshot(reason) { const baks = lsGet("bak", []); baks.unshift({ v: reason, at: Date.now(), docs: DB.docs }); lsSet("bak", baks.slice(0, 3)); }
+{ const prevV = lsGet("ver", null); if (prevV !== APP_VERSION) { if (Object.keys(DB.docs).length) snapshot("before " + APP_VERSION + (prevV ? " (was " + prevV + ")" : "")); lsSet("ver", APP_VERSION); } }
 if (!SYNC.cfg) ensurePresets();
-render(); checkReminders();
+render(); checkReminders(); fetchV6();
+setInterval(() => { if (!document.hidden) fetchV6(); }, 60000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) fetchV6(); });
 if (SYNC.cfg) { setSync("busy", "Connecting…"); pull().then(() => { ensurePresets(); return push(); }).then(startSyncLoop); }
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 window.hubdbg = () => ({ v: APP_VERSION, DB, SYNC });
