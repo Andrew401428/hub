@@ -10,7 +10,7 @@ Calendar + checklists + wishlist in one page. Works on phone and desktop, free, 
 
 ### 1. Host it (GitHub Pages, free, unlimited deploys)
 1. Create a public GitHub repo called `hub`, push this folder to branch `main`.
-2. Repo > Settings > Pages > Source: **GitHub Actions**. The `deploy pages` workflow publishes on every push.
+2. Repo > Settings > Pages > Deploy from a branch: `main`, folder `/ (root)`. Every push republishes in about a minute.
 3. The app is then at `https://<you>.github.io/hub/`.
 
 Nothing private is in the repo: sync keys are typed into Settings on each device and stay in that device's storage.
@@ -29,7 +29,8 @@ Edits upload within a second and other devices pick them up within 5 s while ope
 ### 4. Price bot (optional)
 1. Get a free SerpApi key (serpapi.com, 100 searches/month).
 2. Repo > Settings > Secrets and variables > Actions, add: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `HUB_SECRET`, `SERPAPI_KEY`.
-3. The `price bot` workflow runs every morning (7:30 ET) and can be run by hand from the Actions tab.
+3. Move `pricebot/github-workflow-prices.yml` to `.github/workflows/prices.yml` and push (needs a token with the
+   `workflow` scope: `gh auth refresh -h github.com -s workflow`). It then runs every morning (7:30 ET) and can be run by hand from the Actions tab.
    It searches at most 3 items per run (soonest need-by first) and re-checks each item every 3 days, so the free tier lasts.
 4. In Hub > Settings > Price bot you can change the tax rate, the recheck interval and the trusted-store list.
 
