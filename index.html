@@ -169,10 +169,13 @@ section{margin-bottom:26px}
 .chk[aria-checked="true"]{background:var(--lc,var(--accent));border-color:var(--lc,var(--accent));animation:pop .4s var(--spring)}
 .chk[aria-checked="true"] svg path{stroke-dashoffset:0}
 @keyframes pop{0%{transform:scale(.8)}60%{transform:scale(1.18)}100%{transform:scale(1)}}
-.txt{flex:1;min-width:0;outline:none;padding:3px 4px;border-radius:6px;position:relative;word-break:break-word;transition:color .3s}
+.item{cursor:pointer;user-select:none;-webkit-user-select:none}
+.txt{flex:0 1 auto;min-width:0;max-width:100%;outline:none;padding:3px 10px;margin-left:-6px;border-radius:8px;position:relative;word-break:break-word;transition:color .3s,background .2s;cursor:text;user-select:text;-webkit-user-select:text}
+.txt:hover{background:var(--accent-soft)}
 .txt:focus{background:var(--card);box-shadow:0 0 0 2px var(--accent-soft)}
-.txt::after{content:"";position:absolute;left:4px;top:50%;height:1.5px;width:0;background:var(--muted);transition:width .35s var(--ease)}
-.item.done .txt{color:var(--muted)} .item.done .txt::after{width:calc(100% - 8px)}
+.txt::after{content:"";position:absolute;left:10px;top:50%;height:1.5px;width:0;background:var(--muted);transition:width .35s var(--ease)}
+.item .fill{flex:1;align-self:stretch;min-height:24px}
+.item.done .txt{color:var(--muted)} .item.done .txt::after{width:calc(100% - 20px)}
 .item .x{opacity:0;border:0;background:none;color:var(--muted);padding:4px;border-radius:8px;cursor:pointer;display:flex;transition:opacity .2s,background .2s,color .2s}
 .item:hover .x,.item:focus-within .x{opacity:1}
 .item .x:hover{background:var(--bad-soft);color:var(--bad)}
@@ -293,8 +296,9 @@ kbd{font:11px Inter;border:1px solid var(--line2);border-bottom-width:2px;border
 <div id="toasts"></div>
 <script>
 {
-const APP_VERSION = "0.2.0";
+const APP_VERSION = "0.3.0";
 const CHANGELOG = [
+  "0.3.0 tap a row to tick it, rename only on the word; Lists folded into Home; price bot every N minutes with a monthly search budget",
   "0.2.0 redesign: new look, sidebar + glass tab bar, animated rings, drawn checkmarks, drag to reorder, list colors + icons, bottom sheets, confetti, in-place updates, fixed back button",
   "0.1.0 first build: dashboard rings, checklists, wishlist + price bot, calendar with reminders, Supabase sync, PWA",
 ];
@@ -565,15 +569,15 @@ V.dash = () => {
   return o;
 };
 V.lists = () => `${topbar("Lists", `${lists().length} lists`)}<div class="grid">${lists().map(listCard).join("")}<div class="card sq add" style="--i:${lists().length}" data-act="newlist">${I.plus}New list</div></div>`;
-const itemRow = it => `<div class="item${it.done ? " done" : ""}" data-item="${it.id}"><span class="grip">${I.grip}</span><button class="chk" role="checkbox" aria-checked="${!!it.done}" data-act="tick">${I.check}</button><div class="txt" contenteditable="true" spellcheck="false" data-act="text">${esc(it.text)}</div><button class="x" data-act="delItem" title="Remove">${I.x}</button></div>`;
+const itemRow = it => `<div class="item${it.done ? " done" : ""}" data-item="${it.id}"><span class="grip">${I.grip}</span><button class="chk" role="checkbox" aria-checked="${!!it.done}" data-act="tick">${I.check}</button><div class="txt" contenteditable="true" spellcheck="false" data-act="text">${esc(it.text)}</div><span class="fill"></span><button class="x" data-act="delItem" title="Remove">${I.x}</button></div>`;
 V.list = id => {
-  const l = get("list:" + id); if (!l) return `<div class="empty">List not found. <a href="#lists">Back to lists</a></div>`;
+  const l = get("list:" + id); if (!l) return `<div class="empty">List not found. <a href="#dash">Back home</a></div>`;
   const { t, d } = listStats(l);
-  return `<div class="row" style="margin-bottom:10px"><button class="btn ghost" data-go="#lists">${I.back} Lists</button><span class="sp"></span><button class="btn ghost" data-act="editList">${I.edit} Style</button><button class="btn ghost" data-act="clearDone">Clear done</button><button class="btn ghost danger" data-act="delList">Delete</button></div>
+  return `<div class="row" style="margin-bottom:10px"><button class="btn ghost" data-go="#dash">${I.back} Home</button><span class="sp"></span><button class="btn ghost" data-act="editList">${I.edit} Style</button><button class="btn ghost" data-act="clearDone">Clear done</button><button class="btn ghost danger" data-act="delList">Delete</button></div>
   <div class="card" style="--lc:${l.color || COLORS[0]}"><div class="list-h"><div class="emoji" data-act="editList">${l.emoji || "📝"}</div><div class="sp" style="min-width:0"><input class="title-in" value="${esc(l.title)}" data-act="title" placeholder="List title"><div class="muted small" id="lstats">${d} of ${t} done</div></div>${ring(d, t, 68, "lg")}</div>
   <div class="items" id="items">${l.items.map(itemRow).join("") || `<div class="empty" id="emptyItems">${emptyBox("list", "Nothing here yet. Add your first item below.")}</div>`}</div>
   <form class="addrow" data-act="addItem"><input class="in" placeholder="Add an item…" autocomplete="off" enterkeyhint="done"><button class="btn primary">${I.plus}Add</button></form></div>
-  <p class="small muted" style="margin-top:10px">Tip: drag the dots to reorder, click text to edit, <kbd>Enter</kbd> adds the next one.</p>`;
+  <p class="small muted" style="margin-top:10px">Tip: tap a row to tick it, tap the word itself to rename, drag the dots to reorder, <kbd>Enter</kbd> adds the next one.</p>`;
 };
 function updateListHeader(l) { const { t, d } = listStats(l); setRing($("#view .list-h .ring"), d, t); const s = $("#lstats"); if (s) s.textContent = `${d} of ${t} done`; }
 const wishRow = it => {
@@ -696,7 +700,9 @@ V.settings = () => {
   <div class="card"><h3>Reminders</h3><p class="small muted" style="margin:2px 0 8px">Status: <b>${window.Notification ? Notification.permission : "not supported here"}</b>. On iPhone, notifications only work after adding Hub to the home screen.</p>
     <div class="row"><button class="btn" data-act="notifOn">${I.bell} Enable notifications</button><button class="btn ghost" data-act="notifTest">Test</button></div></div>
   <div class="card"><h3>Price bot</h3><p class="small muted" style="margin:2px 0 4px">A script (<code>pricebot/price_check.py</code>) runs on a schedule, reads the wishlist from Supabase and writes the cheapest trusted offers back. These settings are read by the bot.${meta?.ran_at ? " Last run " + new Date(meta.ran_at).toLocaleString() + "." : ""}</p>
-    <div class="two"><div><label class="field">Sales tax rate (%)</label><input class="in" id="pbTax" type="number" step="0.01" value="${pb.tax_pct ?? 7.5}"></div><div><label class="field">Re-check each item every (days)</label><input class="in" id="pbDays" type="number" min="1" value="${pb.recheck_days ?? 3}"></div></div>
+    <div class="two"><div><label class="field">Sales tax rate (%)</label><input class="in" id="pbTax" type="number" step="0.01" value="${pb.tax_pct ?? 7.5}"></div><div><label class="field">Re-check each item every (minutes)</label><input class="in" id="pbMin" type="number" min="15" step="15" value="${pb.recheck_minutes ?? (pb.recheck_days ? pb.recheck_days * 1440 : 1440)}"></div></div>
+    <div class="two"><div><label class="field">Monthly search budget</label><input class="in" id="pbBudget" type="number" min="1" value="${pb.monthly_budget ?? 95}"></div><div><label class="field">Searches per run</label><input class="in" id="pbPerRun" type="number" min="1" value="${pb.max_per_run ?? 3}"></div></div>
+    <p class="small muted" style="margin:8px 0 0">The bot wakes every 15 minutes. Each item is searched again only after the re-check interval, and the bot stops for the month once the budget is used (SerpApi free tier = 100 searches a month).${meta?.month_used != null ? ` Used this month: <b>${meta.month_used}</b>.` : ""}</p>
     <label class="field">Trusted stores (one per line)</label><textarea id="pbStores" rows="5">${esc((pb.stores || DEFAULT_STORES).join("\n"))}</textarea>
     <div class="row" style="margin-top:12px"><button class="btn primary" data-act="savePb">Save</button></div></div>
   <div class="card"><h3>Data</h3><div class="row wrap" style="margin-top:8px"><button class="btn" data-act="export">${I.down} Export JSON</button><button class="btn" data-act="import">Import JSON</button><button class="btn ghost danger" data-act="wipe">Wipe this device</button></div>
@@ -705,14 +711,14 @@ V.settings = () => {
 const DEFAULT_STORES = ["Amazon.com", "Walmart", "Target", "Best Buy", "Costco", "Home Depot", "Lowe's", "B&H Photo", "Newegg", "Micro Center", "REI", "Dick's Sporting Goods", "Apple", "Staples", "Office Depot", "Kohl's", "Macy's", "Nike", "Adidas", "GameStop", "Chewy", "Petco", "Sam's Club", "Academy Sports", "Backcountry"];
 
 /* ---------- router + render ---------- */
-const TABS = [["dash", "Home", I.grid], ["lists", "Lists", I.list], ["wish", "Wishlist", I.cart], ["cal", "Calendar", I.cal], ["settings", "Settings", I.cog]];
+const TABS = [["dash", "Home", I.grid], ["wish", "Wishlist", I.cart], ["cal", "Calendar", I.cal], ["settings", "Settings", I.cog]];
 function buildNav() {
   const html = TABS.map(([k, t, ic]) => `<a href="#${k}" data-t="${k}">${ic}<span>${t}</span></a>`).join("");
   $("#sideNav").insertAdjacentHTML("beforeend", html); $("#tabbar").insertAdjacentHTML("beforeend", html);
 }
-function route() { const h = location.hash.replace(/^#/, "") || "dash"; const [name, ...rest] = h.split("/"); return { name: V[name] ? name : "dash", arg: rest.join("/") }; }
+function route() { const h = location.hash.replace(/^#/, "") || "dash"; const [name, ...rest] = h.split("/"); return { name: V[name] && name !== "lists" ? name : "dash", arg: rest.join("/") }; }
 function moveInd() {
-  const { name } = route(), tab = name === "list" ? "lists" : name;
+  const { name } = route(), tab = name === "list" ? "dash" : name;
   for (const nav of [$("#sideNav"), $("#tabbar")]) {
     const a = $(`a[data-t="${tab}"]`, nav), ind = $(".ind", nav); if (!a) continue;
     if (nav.id === "tabbar") { ind.style.width = a.offsetWidth + "px"; ind.style.transform = `translateX(${a.offsetLeft}px)`; }
@@ -721,7 +727,7 @@ function moveInd() {
 }
 let lastView = null;
 function render() {
-  const { name, arg } = route(), tab = name === "list" ? "lists" : name;
+  const { name, arg } = route(), tab = name === "list" ? "dash" : name;
   $$("#sideNav a,#tabbar a").forEach(a => a.classList.toggle("on", a.dataset.t === tab));
   const main = $("#view");
   const addIn = $(".addrow input.in", main), keepAdd = addIn && document.activeElement === addIn ? addIn.value : null;
@@ -763,12 +769,13 @@ function dragInit(container, onDrop) {
 
 /* ---------- event handling (delegated) ---------- */
 document.addEventListener("click", async e => {
-  const t = e.target.closest("[data-act]"), act = t?.dataset.act, { arg } = route();
+  let t = e.target.closest("[data-act]"), act = t?.dataset.act; const { arg } = route();
+  if (!act && e.target.closest(".item") && !e.target.closest(".txt,.grip,.x")) { t = $(".chk", e.target.closest(".item")); act = "tick"; }
   if (act === "toggleTheme") { const cur = lsGet("theme", "system"), isDark = document.documentElement.dataset.theme === "dark" || (cur === "system" && matchMedia("(prefers-color-scheme: dark)").matches); lsSet("theme", isDark ? "light" : "dark"); applyTheme(); return; }
   if (!$("#view").contains(e.target) && !$("#fabWrap").contains(e.target)) return;
   if (act === "newlist") { const id = newList("New list"); location.hash = "#list/" + id.slice(5); setTimeout(() => { const i = $(".title-in"); i?.focus(); i?.select(); }, 60); return; }
   if (act === "editList") { listStyleForm("list:" + arg); return; }
-  if (act === "delList") { const l = get("list:" + arg); if (await ask("Delete list?", `“${l.title}” and its ${l.items.length} items will be removed everywhere.`)) { del("list:" + arg, { quiet: true }); location.hash = "#lists"; toast("List deleted"); } return; }
+  if (act === "delList") { const l = get("list:" + arg); if (await ask("Delete list?", `“${l.title}” and its ${l.items.length} items will be removed everywhere.`)) { del("list:" + arg, { quiet: true }); location.hash = "#dash"; toast("List deleted"); } return; }
   if (act === "clearDone") { const rows = $$("#items .item.done"); if (!rows.length) return toast("Nothing to clear"); rows.forEach(r => collapse(r)); patch("list:" + arg, l => l.items = l.items.filter(i => !i.done), { quiet: true }); setTimeout(() => updateListHeader(get("list:" + arg)), 50); return; }
   if (act === "tick") {
     const row = t.closest("[data-item]"), iid = row.dataset.item, l = get("list:" + arg), it = l.items.find(i => i.id === iid); if (!it) return;
@@ -796,7 +803,7 @@ document.addEventListener("click", async e => {
   if (act === "disconnect") { disconnect(); render(); return; }
   if (act === "notifOn") { if (!window.Notification) return toast("Not supported in this browser"); Notification.requestPermission().then(p => { toast("Notifications " + p); render(); }); return; }
   if (act === "notifTest") { if (Notification?.permission !== "granted") return toast("Enable them first"); try { new Notification("Hub", { body: "Reminders work here." }); } catch { navigator.serviceWorker?.ready.then(r => r.showNotification("Hub", { body: "Reminders work here." })); } return; }
-  if (act === "savePb") { put("settings:pricebot", { tax_pct: Number($("#pbTax").value) || 0, recheck_days: Math.max(1, Number($("#pbDays").value) || 3), stores: $("#pbStores").value.split("\n").map(s => s.trim()).filter(Boolean) }); toast("Saved"); return; }
+  if (act === "savePb") { put("settings:pricebot", { tax_pct: Number($("#pbTax").value) || 0, recheck_minutes: Math.max(15, Number($("#pbMin").value) || 1440), monthly_budget: Math.max(1, Number($("#pbBudget").value) || 95), max_per_run: Math.max(1, Number($("#pbPerRun").value) || 3), stores: $("#pbStores").value.split("\n").map(s => s.trim()).filter(Boolean) }); toast("Saved"); return; }
   if (act === "savePref") { lsSet("pref", { ...PREF(), name: $("#pName").value.trim() }); applyTheme(); toast("Saved"); return; }
   if (act === "theme") { lsSet("theme", t.dataset.v); applyTheme(); render(); return; }
   if (act === "export") { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify({ version: APP_VERSION, docs: DB.docs }, null, 1)], { type: "application/json" })); a.download = "hub-" + today() + ".json"; a.click(); return; }
@@ -840,7 +847,7 @@ $("#view").addEventListener("keydown", e => {
 $("#view").addEventListener("paste", e => { if (e.target.dataset?.act === "text") { e.preventDefault(); document.execCommand("insertText", false, (e.clipboardData.getData("text/plain") || "").replace(/\n+/g, " ")); } });
 document.addEventListener("keydown", e => {
   if (e.target.matches("input,textarea,[contenteditable]") || e.metaKey || e.ctrlKey || e.altKey) return;
-  const map = { 1: "#dash", 2: "#lists", 3: "#wish", 4: "#cal", 5: "#settings" };
+  const map = { 1: "#dash", 2: "#wish", 3: "#cal", 4: "#settings" };
   if (map[e.key]) location.hash = map[e.key];
   if (e.key === "n" && route().name === "cal") eventForm({});
   if (e.key === "n" && route().name === "wish") wishForm({});

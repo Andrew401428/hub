@@ -1,7 +1,7 @@
 name: price bot
 on:
   schedule:
-    - cron: "30 11 * * *"   # daily 11:30 UTC (7:30am ET)
+    - cron: "*/15 * * * *"   # every 15 minutes (GitHub may delay or skip busy slots)
   workflow_dispatch:
 permissions:
   contents: read
@@ -14,9 +14,9 @@ jobs:
         with:
           python-version: "3.12"
       - run: python pricebot/price_check.py
+        if: env.SERPAPI_KEY != ''
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           HUB_SECRET: ${{ secrets.HUB_SECRET }}
           SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
-          MAX_SEARCHES: "3"

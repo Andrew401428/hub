@@ -7,7 +7,9 @@ Hub app shows under each wishlist item.
 
 Env vars (GitHub Actions secrets or a local .env):
   SUPABASE_URL, SUPABASE_ANON_KEY, HUB_SECRET, SERPAPI_KEY
-Optional: MAX_SEARCHES (per run, default 3) to stay inside the free tier.
+Settings come from the app (Settings > Price bot, doc settings:pricebot): recheck_minutes, max_per_run,
+monthly_budget, tax_pct, stores. MAX_SEARCHES env overrides max_per_run. The bot counts searches per
+calendar month in meta:pricebot and stops when the budget is used, so a frequent schedule stays free.
 
 Usage:  python price_check.py            # normal run
         python price_check.py --dry      # search but do not write
@@ -21,8 +23,9 @@ FORCE = "--force" in sys.argv
 
 def env(k, default=None):
     v = os.environ.get(k, default)
-    if v is None:
-        sys.exit(f"missing env {k}")
+    if v is None or v == "":
+        print(f"{k} is not set, nothing to do (add the secrets described in README.md)")
+        sys.exit(0)
     return v
 
 # .env support for local runs
@@ -36,7 +39,7 @@ SUPA = env("SUPABASE_URL").rstrip("/")
 KEY = env("SUPABASE_ANON_KEY")
 SECRET = env("HUB_SECRET")
 SERP = env("SERPAPI_KEY")
-MAX_SEARCHES = int(os.environ.get("MAX_SEARCHES", "3"))
+MAX_SEARCHES_ENV = os.environ.get("MAX_SEARCHES")
 
 DEFAULT_STORES = ["Amazon.com", "Walmart", "Target", "Best Buy", "Costco", "Home Depot", "Lowe's", "B&H Photo",
                   "Newegg", "Micro Center", "REI", "Dick's Sporting Goods", "Apple", "Staples", "Office Depot",
@@ -133,8 +136,19 @@ def main():
     rows = supa("hub_docs?select=id,data&or=(id.like.wish:*,id.like.price:*,id.eq.settings:pricebot)")
     docs = {r["id"]: r["data"] for r in rows}
     cfg = docs.get("settings:pricebot") or {}
-    recheck = timedelta(days=float(cfg.get("recheck_days", 3)))
+    if cfg.get("recheck_minutes"):
+        recheck = timedelta(minutes=float(cfg["recheck_minutes"]))
+    else:
+        recheck = timedelta(days=float(cfg.get("recheck_days", 1)))
+    max_per_run = int(MAX_SEARCHES_ENV or cfg.get("max_per_run") or 3)
+    budget = int(cfg.get("monthly_budget") or 95)
     now = datetime.now(timezone.utc)
+    meta = supa("hub_docs?select=data&id=eq.meta:pricebot")
+    meta = meta[0]["data"] if meta else {}
+    month = now.strftime("%Y-%m")
+    used = int(meta.get("month_used") or 0) if meta.get("month") == month else 0
+    left = max(0, budget - used)
+    MAX_SEARCHES = min(max_per_run, left)
     wishes = [(k, v) for k, v in docs.items() if k.startswith("wish:") and not v.get("deleted") and not v.get("done")]
     # soonest need-by first, then oldest check first
     def prio(kv):
@@ -142,7 +156,7 @@ def main():
         p = docs.get("price:" + k[5:]) or {}
         return (v.get("by") or "9999-99-99", p.get("checked_at") or "")
     wishes.sort(key=prio)
-    print(f"{len(wishes)} open wishlist items, max {MAX_SEARCHES} searches")
+    print(f"{len(wishes)} open wishlist items, {used}/{budget} searches used this month, up to {MAX_SEARCHES} now")
     searched = 0
     for k, v in wishes:
         if searched >= MAX_SEARCHES:
@@ -163,7 +177,8 @@ def main():
         print(f"- {v.get('name')}: {len(top)} trusted offers" + (f", best {best['store']} ${best['total']}" if best else ""))
         upsert("price:" + k[5:], {"query": query, "offers": top, "checked_at": now.isoformat(), "title": best["title"] if best else ""})
         time.sleep(1)
-    upsert("meta:pricebot", {"ran_at": now.isoformat(), "note": f"{searched} searched, {len(wishes)} open"})
+    note = f"{searched} searched, {len(wishes)} open" + ("" if left else ", monthly budget used up")
+    upsert("meta:pricebot", {"ran_at": now.isoformat(), "note": note, "month": month, "month_used": used + searched, "budget": budget})
 
 
 if __name__ == "__main__":
