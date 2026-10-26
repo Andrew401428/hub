@@ -110,6 +110,7 @@ section{margin-bottom:26px}
 .sec-h{display:flex;align-items:center;gap:10px;margin-bottom:12px}
 .sec-h h2{font-size:17px;font-weight:700}
 .sec-h .n{font-size:12px;color:var(--muted);font-weight:500}
+.sec-h h2{white-space:nowrap}@media (max-width:640px){.sec-h{flex-wrap:wrap;row-gap:2px}.sec-h .n{order:3;flex-basis:100%}}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px}
 @media (min-width:600px){.grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}}
 .sq{aspect-ratio:1;display:flex;flex-direction:column;cursor:pointer;position:relative;overflow:hidden;padding:16px;animation:cardIn .5s var(--spring) both;animation-delay:calc(var(--i,0)*45ms);transition:transform .25s var(--spring),box-shadow .25s,border-color .25s;--lc:var(--accent)}
@@ -436,8 +437,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <div id="toasts"></div>
 <script>
 {
-const APP_VERSION = "0.7.0";
+const APP_VERSION = "0.7.1";
 const CHANGELOG = [
+  "0.7.1 Home shows the whole current week: the time grid on desktop, a day-by-day agenda on phone",
   "0.7.0 colors: every preset has its own random color (editable), events from a preset inherit it, other new events get a random color with a swatch picker; calendar chips, grid blocks, agenda rows and dots follow the event color",
   "0.6.3 Home block is centered again: greeting, Today and Lists keep their width, Training and Goals sit right beside the middle",
   "0.6.2 Home uses the full window width: Training and Goals sit out by the edges, the middle keeps its width",
@@ -814,7 +816,11 @@ V.dash = () => {
   const cover = PREF().heroCover && lsGet("bgimg", null);
   const hero = `<div class="hero${cover ? " cover" : ""}"${cover ? ` style="background-image:url(${cover})"` : ""}>${cover ? '<div class="coverlay"></div>' : ""}<div class="sp" style="min-width:0"><div class="row"><div class="greet">${greet}${name ? ", " + esc(name) : ""} 👋</div><span class="sp"></span><button class="btn ghost icon phone-only" data-go="#settings" style="color:#fff" title="Settings">${I.cog}</button></div><div class="date">${new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</div>
     <div class="stat"><div><b>${tod.length}</b>today</div><div><b>${tot - done}</b>open tasks</div><div><b>${w.length - wd}</b>to buy</div></div></div>${ring(done, tot, 84, "lg")}</div>`;
-  const todayCard = `<section><div class="sec-h"><h2>Today</h2><span class="n">${fmtDate(today(), { weekday: "long" })}</span><span class="sp"></span><button class="btn ghost" data-go="#cal">Calendar ${I.chev}</button></div><div class="card" style="padding:8px 10px">${tod.length ? tod.map(({ ev, date }) => evRow(ev, date, true)).join("") : `<div class="empty" style="padding:18px">Nothing scheduled today.</div>`}${up.length ? `<div class="agenda"><div class="dh">Next up</div>${up.map(({ ev, date }) => evRow(ev, date, true)).join("")}</div>` : ""}</div></section>`;
+  const w0 = weekStart(today()), wdays = [...Array(7)].map((_, i) => addDays(w0, i)), wocc = occurrences(w0, addDays(w0, 6));
+  const weekHead = `<div class="sec-h"><h2>This week</h2><span class="n">${fmtDate(w0, { month: "short", day: "numeric" })} – ${fmtDate(addDays(w0, 6), { month: "short", day: "numeric" })} · ${wocc.length} event${wocc.length === 1 ? "" : "s"}</span><span class="sp"></span><button class="btn ghost" data-go="#cal">Calendar ${I.chev}</button></div>`;
+  const todayCard = phone
+    ? `<section>${weekHead}<div class="card agenda" style="padding:6px 12px 12px">${wdays.map(dd => { const xs = wocc.filter(x => x.date === dd); if (!xs.length && dd !== today()) return ""; return `<div class="dh${dd === today() ? " today" : ""}">${dd === today() ? "Today" : fmtDate(dd, { weekday: "long", day: "numeric" })}</div>${xs.map(({ ev, date }) => evRow(ev, date, true)).join("") || `<div class="muted small" style="padding:4px 8px">Nothing today.</div>`}`; }).join("") || `<div class="empty" style="padding:18px">Nothing this week.</div>`}</div></section>`
+    : `<section>${weekHead}${timeGrid(wdays)}</section>`;
   if (!phone) {
     let o = `<div class="dash-cols"><div class="col">${trainingCard()}</div><div class="mid">${hero}${todayCard}</div><div class="col">${goalsCard(8)}</div></div>`;
     o += `<div class="dash-cols"><div class="col"></div><section class="mid"><div class="sec-h"><h2>Lists</h2><span class="n">${done}/${tot} done</span><span class="sp"></span><button class="btn ghost" data-go="#lists">All lists ${I.chev}</button></div><div class="grid">${ls.map(listCard).join("")}`;
