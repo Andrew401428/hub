@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hub</title>
+<meta name="theme-color" content="#1d4ed8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Hub">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+:root{
+  --bg:#f4f5f8; --card:#ffffff; --text:#111827; --muted:#6b7280; --line:#e5e7eb;
+  --accent:#1d4ed8; --accent-soft:#dbeafe; --ok:#16a34a; --warn:#d97706; --bad:#dc2626;
+  --ring-bg:#e5e7eb; --shadow:0 1px 2px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.05);
+  --radius:14px;
+}
+:root[data-theme="dark"]{
+  --bg:#0f1117; --card:#181b24; --text:#e5e7eb; --muted:#9ca3af; --line:#2a2f3c;
+  --accent:#60a5fa; --accent-soft:#1e3a5f; --ring-bg:#2a2f3c; --shadow:0 1px 2px rgba(0,0,0,.4);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1117; --card:#181b24; --text:#e5e7eb; --muted:#9ca3af; --line:#2a2f3c;
+    --accent:#60a5fa; --accent-soft:#1e3a5f; --ring-bg:#2a2f3c; --shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,sans-serif;-webkit-tap-highlight-color:transparent}
+body{padding-bottom:calc(64px + env(safe-area-inset-bottom))}
+a{color:var(--accent)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 12px}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+button.ghost{border-color:transparent;background:transparent;color:var(--muted);padding:6px 8px}
+button.ghost:hover{color:var(--text)}
+button.danger{color:var(--bad)}
+input,select,textarea{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:8px 10px;width:100%}
+input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);margin:0;flex:none}
+label.f{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px}
+header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top));display:flex;align-items:center;gap:10px}
+header h1{font-size:18px;margin:0;flex:1}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--muted);display:inline-block}
+.dot.ok{background:var(--ok)} .dot.bad{background:var(--bad)} .dot.busy{background:var(--warn)}
+main{max-width:1100px;margin:0 auto;padding:16px}
+nav.tabs{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:6px 0 calc(6px + env(safe-area-inset-bottom));z-index:5}
+nav.tabs a{flex:1;text-align:center;text-decoration:none;color:var(--muted);font-size:11px;padding:4px 0}
+nav.tabs a svg{display:block;margin:0 auto 2px;width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+nav.tabs a.on{color:var(--accent)}
+@media (min-width:860px){
+  nav.tabs{top:0;bottom:auto;left:auto;right:16px;background:transparent;border:0;width:auto;padding:12px 0 0;gap:4px}
+  nav.tabs a{padding:6px 12px;font-size:14px;border-radius:10px}
+  nav.tabs a svg{display:none}
+  nav.tabs a.on{background:var(--accent-soft)}
+  body{padding-bottom:24px}
+  header{padding-right:520px}
+}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.sq{aspect-ratio:1;display:flex;flex-direction:column;cursor:pointer;position:relative;overflow:hidden;transition:transform .12s}
+.sq:hover{transform:translateY(-2px)}
+.sq h3{margin:0 0 4px;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sq .mini{font-size:12px;color:var(--muted);overflow:hidden;flex:1}
+.sq .mini div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sq .foot{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--muted)}
+.sq.add{align-items:center;justify-content:center;color:var(--muted);border:2px dashed var(--line);background:transparent;box-shadow:none;font-size:14px}
+.ring text{fill:var(--text);font-size:13px;font-weight:600}
+.ring.big text{font-size:20px}
+h2{font-size:20px;margin:8px 0 12px}
+h2 small{font-weight:400;color:var(--muted);font-size:13px;margin-left:8px}
+.row{display:flex;align-items:center;gap:10px}
+.row.wrap{flex-wrap:wrap}
+.sp{flex:1}
+.muted{color:var(--muted)} .small{font-size:12px}
+.item{display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:0}
+.item .txt{flex:1;border:0;background:transparent;padding:4px 0;border-radius:0;min-width:0}
+.item.done .txt{text-decoration:line-through;color:var(--muted)}
+.item .x{opacity:0;border:0;background:none;color:var(--muted);font-size:18px;padding:0 6px}
+.item:hover .x,.item:focus-within .x{opacity:1}
+@media (hover:none){.item .x{opacity:1}}
+.addrow{display:flex;gap:8px;margin-top:8px}
+.title-in{font-size:20px;font-weight:600;border:0;background:transparent;padding:4px 0;border-radius:0;border-bottom:1px solid transparent}
+.title-in:focus{outline:none;border-bottom-color:var(--accent)}
+.pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent)}
+.pill.work{background:#fef3c7;color:#92400e}
+.pill.late{background:#fee2e2;color:#991b1b}
+.pill.ok{background:#dcfce7;color:#166534}
+/* calendar */
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal .dow{text-align:center;font-size:11px;color:var(--muted);padding:4px 0}
+.cal .day{background:var(--card);border-radius:10px;min-height:64px;padding:4px 6px;font-size:12px;cursor:pointer;border:1px solid transparent;overflow:hidden}
+.cal .day.dim{opacity:.4}
+.cal .day.today{border-color:var(--accent)}
+.cal .day:hover{border-color:var(--accent)}
+.cal .day .n{font-weight:600;margin-bottom:2px}
+.cal .ev{font-size:10.5px;background:var(--accent-soft);color:var(--accent);border-radius:5px;padding:1px 4px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal .ev.work{background:#fef3c7;color:#92400e}
+@media (max-width:600px){.cal .day{min-height:48px}.cal .ev{display:none}.cal .day .dots{display:flex;gap:2px}.cal .day .dots i{width:5px;height:5px;border-radius:50%;background:var(--accent);display:block}}
+.evrow{display:flex;gap:12px;padding:10px 4px;border-bottom:1px solid var(--line);align-items:flex-start}
+.evrow:last-child{border-bottom:0}
+.evrow .when{width:88px;flex:none;font-size:12px;color:var(--muted);padding-top:2px}
+.evrow .when b{display:block;color:var(--text);font-size:14px}
+/* sheet / modal */
+.backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+@media (min-width:600px){.backdrop{align-items:center}}
+.sheet{background:var(--card);border-radius:18px 18px 0 0;width:100%;max-width:520px;max-height:90vh;overflow:auto;padding:18px 18px calc(18px + env(safe-area-inset-bottom))}
+@media (min-width:600px){.sheet{border-radius:18px}}
+.sheet h3{margin:0 0 6px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#toasts{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom));z-index:30;display:flex;flex-direction:column;gap:6px;pointer-events:none}
+@media (min-width:860px){#toasts{bottom:24px}}
+.toast{background:var(--text);color:var(--bg);padding:10px 14px;border-radius:10px;font-size:14px;box-shadow:var(--shadow);animation:up .2s}
+@keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
+.wish{padding:10px 4px;border-bottom:1px solid var(--line)}
+.wish:last-child{border-bottom:0}
+.wish .head{display:flex;align-items:center;gap:10px}
+.wish .head .name{flex:1;font-weight:600;cursor:pointer}
+.wish.done .head .name{text-decoration:line-through;color:var(--muted)}
+.wish .meta{font-size:12px;color:var(--muted);margin-left:32px;display:flex;gap:10px;flex-wrap:wrap}
+.offers{margin:8px 0 0 32px;font-size:13px}
+.offers table{border-collapse:collapse;width:100%}
+.offers td,.offers th{padding:4px 6px;text-align:left;border-bottom:1px solid var(--line);font-size:12.5px}
+.offers th{color:var(--muted);font-weight:500}
+.offers tr.best td{font-weight:600}
+.empty{color:var(--muted);text-align:center;padding:30px 10px}
+code{background:var(--bg);padding:1px 5px;border-radius:5px;font-size:12.5px}
+details summary{cursor:pointer;color:var(--muted);font-size:13px}
+.section{margin-bottom:22px}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="hTitle">Hub</h1>
+  <span class="dot" id="syncDot" title="Sync status"></span>
+</header>
+<main id="view"></main>
+<nav class="tabs" id="tabs">
+  <a href="#dash" data-t="dash"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg>Dashboard</a>
+  <a href="#lists" data-t="lists"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg>Lists</a>
+  <a href="#wish" data-t="wish"><svg viewBox="0 0 24 24"><path d="M3 6h2l2 10h11l2-7H7"/><circle cx="9" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/></svg>Wishlist</a>
+  <a href="#cal" data-t="cal"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Calendar</a>
+  <a href="#settings" data-t="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</a>
+</nav>
+<div id="toasts"></div>
+<script>
+{
+const APP_VERSION = "0.1.0";
+const CHANGELOG = [
+  "0.1.0 first build: dashboard rings, checklists, wishlist + price bot, calendar with reminders, Supabase sync, PWA",
+];
+
+/* ---------- utils ---------- */
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const pad = n => String(n).padStart(2, "0");
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const today = () => ymd(new Date());
+const parseYmd = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+const addDays = (s, n) => { const d = parseYmd(s); d.setDate(d.getDate() + n); return ymd(d); };
+const fmtDate = (s, opts = { weekday: "short", month: "short", day: "numeric" }) => parseYmd(s).toLocaleDateString(undefined, opts);
+const fmtTime = t => { if (!t) return ""; const [h, m] = t.split(":").map(Number); const ap = h >= 12 ? "pm" : "am"; return `${((h + 11) % 12) + 1}:${pad(m)}${ap}`; };
+const money = n => n == null ? "—" : "$" + Number(n).toFixed(2);
+const daysUntil = s => Math.round((parseYmd(s) - parseYmd(today())) / 864e5);
+function toast(msg, ms = 2600) {
+  const t = document.createElement("div"); t.className = "toast"; t.textContent = msg;
+  $("#toasts").appendChild(t); setTimeout(() => t.remove(), ms);
+}
+function modal(html) {
+  const b = document.createElement("div"); b.className = "backdrop";
+  b.innerHTML = `<div class="sheet">${html}</div>`;
+  b.addEventListener("click", e => { if (e.target === b) b.remove(); });
+  document.body.appendChild(b);
+  const first = $("input,textarea,select", b); if (first && matchMedia("(min-width:600px)").matches) first.focus();
+  return b;
+}
+const lsGet = (k, d) => { try { const v = localStorage.getItem("hub:" + k); return v == null ? d : JSON.parse(v); } catch { return d; } };
+const lsSet = (k, v) => { try { localStorage.setItem("hub:" + k, JSON.stringify(v)); } catch {} };
+
+/* ---------- store: local docs + Supabase sync ----------
+   Every record is a doc {id, data}. ids: list:<uid>, wish:<uid>, event:<uid>,
+   price:<wishId> (written by the price bot), settings:pricebot, meta:pricebot.
+   Deleted docs keep a tombstone {deleted:true} so other devices drop them too. */
+const DB = { docs: lsGet("docs", {}), pending: new Set(lsGet("pending", [])), cursor: lsGet("cursor", null) };
+const persist = () => { lsSet("docs", DB.docs); lsSet("pending", [...DB.pending]); lsSet("cursor", DB.cursor); };
+const get = id => { const d = DB.docs[id]; return d && !d.data.deleted ? d.data : null; };
+const all = prefix => Object.entries(DB.docs).filter(([k, v]) => k.startsWith(prefix) && !v.data.deleted).map(([k, v]) => ({ id: k, ...v.data }));
+function put(id, data, { quiet } = {}) {
+  const { id: _i, ...clean } = data;
+  DB.docs[id] = { data: clean, at: Date.now() }; DB.pending.add(id); persist(); schedulePush();
+  if (!quiet) render();
+}
+const del = id => put(id, { deleted: true });
+const patch = (id, fn) => { const d = get(id); if (d) { fn(d); put(id, d); } };
+
+const SYNC = { cfg: lsGet("sync", null), state: "off", msg: "Not connected", lastPull: null, timer: null };
+function setSync(state, msg) { SYNC.state = state; SYNC.msg = msg; const d = $("#syncDot"); d.className = "dot " + ({ ok: "ok", bad: "bad", busy: "busy" }[state] || ""); d.title = msg; const s = $("#syncStatus"); if (s) s.textContent = msg; }
+async function supa(path, opt = {}) {
+  const c = SYNC.cfg; if (!c?.url) throw new Error("no sync config");
+  const headers = { apikey: c.key, Authorization: "Bearer " + c.key, "x-hub-secret": c.secret, "Content-Type": "application/json", ...(opt.headers || {}) };
+  const r = await fetch(c.url.replace(/\/+$/, "") + "/rest/v1/" + path, { ...opt, headers });
+  if (!r.ok) { let t = ""; try { t = (await r.json()).message || ""; } catch {} throw new Error(`${r.status} ${t}`.trim()); }
+  return r;
+}
+let pushTimer = null;
+function schedulePush() { if (!SYNC.cfg) return; clearTimeout(pushTimer); pushTimer = setTimeout(push, 300); }
+let pushing = false;
+async function push() {
+  if (!SYNC.cfg || pushing || !DB.pending.size || !navigator.onLine) return;
+  pushing = true;
+  const ids = [...DB.pending];
+  try {
+    const rows = ids.map(id => ({ id, data: DB.docs[id].data }));
+    await supa("hub_docs?on_conflict=id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify(rows) });
+    ids.forEach(id => DB.pending.delete(id)); persist();
+    if (SYNC.state !== "ok") setSync("ok", "Synced");
+  } catch (e) { setSync("bad", "Upload failed: " + e.message); }
+  pushing = false;
+  if (DB.pending.size) schedulePush();
+}
+let pulling = false;
+async function pull(full = false) {
+  if (!SYNC.cfg || pulling || !navigator.onLine) return null;
+  pulling = true; const seen = new Set();
+  try {
+    const q = (!full && DB.cursor) ? `&updated_at=gt.${encodeURIComponent(DB.cursor)}` : "";
+    const rows = await (await supa(`hub_docs?select=id,data,updated_at&order=updated_at.asc${q}`)).json();
+    let changed = false;
+    for (const row of rows) {
+      seen.add(row.id);
+      if (row.updated_at > (DB.cursor || "")) DB.cursor = row.updated_at;
+      if (DB.pending.has(row.id)) continue;         // local edit not uploaded yet wins
+      const cur = DB.docs[row.id];
+      if (cur && JSON.stringify(cur.data) === JSON.stringify(row.data)) continue;
+      DB.docs[row.id] = { data: row.data, at: Date.parse(row.updated_at) }; changed = true;
+    }
+    persist(); SYNC.lastPull = new Date();
+    setSync("ok", "Synced " + SYNC.lastPull.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
+    if (changed) render();
+  } catch (e) { setSync("bad", "Sync failed: " + e.message); }
+  pulling = false; return seen;
+}
+async function connect(cfg) {
+  SYNC.cfg = cfg; lsSet("sync", cfg); setSync("busy", "Connecting…");
+  DB.pending.clear(); DB.cursor = null;
+  const seen = await pull(true);
+  if (seen === null || SYNC.state === "bad") return false;
+  for (const id of Object.keys(DB.docs)) if (!seen.has(id)) DB.pending.add(id);   // local-only docs go up
+  persist(); await push(); startSyncLoop(); return true;
+}
+function disconnect() { SYNC.cfg = null; lsSet("sync", null); clearInterval(SYNC.timer); setSync("off", "Not connected"); }
+function startSyncLoop() {
+  clearInterval(SYNC.timer);
+  const tick = () => { if (!SYNC.cfg) return; push(); pull(); };
+  const arm = () => { clearInterval(SYNC.timer); SYNC.timer = setInterval(tick, document.hidden ? 30000 : 5000); };
+  arm();
+  document.addEventListener("visibilitychange", () => { arm(); if (!document.hidden) tick(); });
+  addEventListener("focus", tick); addEventListener("online", tick);
+}
+
+/* ---------- progress ring ---------- */
+function ring(done, total, size = 64, big = false) {
+  const pct = total ? done / total : 0, w = size >= 80 ? 9 : 7, r = (size - w) / 2 - 1, c = 2 * Math.PI * r;
+  return `<svg class="ring${big ? " big" : ""}" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <circle cx="${size / 2}" cy="${size / 2}" r="${r}" stroke="var(--ring-bg)" stroke-width="${w}" fill="none"/>
+    <circle cx="${size / 2}" cy="${size / 2}" r="${r}" stroke="${pct >= 1 ? "var(--ok)" : "var(--accent)"}" stroke-width="${w}" fill="none" stroke-linecap="round"
+      stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - pct)}" transform="rotate(-90 ${size / 2} ${size / 2})" style="transition:stroke-dashoffset .5s"/>
+    <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle">${Math.round(pct * 100)}%</text></svg>`;
+}
+
+/* ---------- lists ---------- */
+const lists = () => all("list:").sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.created ?? 0) - (b.created ?? 0));
+const listStats = l => { const t = l.items.length, d = l.items.filter(i => i.done).length; return { t, d }; };
+function newList(title) { const id = "list:" + uid(); put(id, { title: title || "New list", items: [], created: Date.now(), order: lists().length }); return id; }
+const wishItems = () => all("wish:").sort((a, b) => (a.by || "9999") < (b.by || "9999") ? -1 : 1);
+
+/* ---------- calendar ---------- */
+const events = () => all("event:");
+function occurrences(from, to) {   // expand repeats into [{ev, date}] within [from, to]
+  const out = [];
+  for (const ev of events()) {
+    if (!ev.date) continue;
+    if (!ev.repeat || ev.repeat === "none") { if (ev.date >= from && ev.date <= to) out.push({ ev, date: ev.date }); continue; }
+    let d = ev.date, guard = 0;
+    while (d <= to && guard++ < 800) {
+      if (d >= from && (!ev.until || d <= ev.until) && !(ev.skip || []).includes(d)) out.push({ ev, date: d });
+      if (ev.until && d > ev.until) break;
+      d = ev.repeat === "daily" ? addDays(d, 1) : ev.repeat === "weekly" ? addDays(d, 7) : ev.repeat === "biweekly" ? addDays(d, 14)
+        : (() => { const x = parseYmd(d); x.setMonth(x.getMonth() + 1); return ymd(x); })();
+    }
+  }
+  return out.sort((a, b) => (a.date + (a.ev.start || "")) < (b.date + (b.ev.start || "")) ? -1 : 1);
+}
+const gcalStamp = (date, time) => date.replace(/-/g, "") + "T" + (time || "09:00").replace(":", "") + "00";
+function gcalLink(ev) {
+  const p = new URLSearchParams({ action: "TEMPLATE", text: ev.title, dates: `${gcalStamp(ev.date, ev.start)}/${gcalStamp(ev.date, ev.end || ev.start)}`, details: ev.note || "", location: ev.loc || "" });
+  const rr = { daily: "RRULE:FREQ=DAILY", weekly: "RRULE:FREQ=WEEKLY", biweekly: "RRULE:FREQ=WEEKLY;INTERVAL=2", monthly: "RRULE:FREQ=MONTHLY" }[ev.repeat];
+  if (rr) p.set("recur", rr + (ev.until ? ";UNTIL=" + ev.until.replace(/-/g, "") + "T235959" : ""));
+  return "https://calendar.google.com/calendar/render?" + p;
+}
+function icsAll() {
+  const L = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Hub//EN", "CALSCALE:GREGORIAN"];
+  const e = s => String(s || "").replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/[,;]/g, m => "\\" + m);
+  for (const ev of events()) {
+    if (!ev.date) continue;
+    L.push("BEGIN:VEVENT", "UID:" + ev.id + "@hub", "DTSTAMP:" + new Date().toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z",
+      "DTSTART:" + gcalStamp(ev.date, ev.start), "DTEND:" + gcalStamp(ev.date, ev.end || ev.start), "SUMMARY:" + e(ev.title));
+    if (ev.loc) L.push("LOCATION:" + e(ev.loc)); if (ev.note) L.push("DESCRIPTION:" + e(ev.note));
+    const rr = { daily: "FREQ=DAILY", weekly: "FREQ=WEEKLY", biweekly: "FREQ=WEEKLY;INTERVAL=2", monthly: "FREQ=MONTHLY" }[ev.repeat];
+    if (rr) L.push("RRULE:" + rr + (ev.until ? ";UNTIL=" + ev.until.replace(/-/g, "") + "T235959" : ""));
+    if (ev.remind != null && ev.remind >= 0) L.push("BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:" + e(ev.title), "TRIGGER:-PT" + ev.remind + "M", "END:VALARM");
+    L.push("END:VEVENT");
+  }
+  L.push("END:VCALENDAR");
+  const blob = new Blob([L.join("\r\n")], { type: "text/calendar" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "hub.ics"; a.click();
+}
+
+/* reminders: fire a notification when (start - remind) passes while the app is open */
+const fired = new Set(lsGet("fired", []));
+function checkReminders() {
+  const now = new Date(), from = today(), to = addDays(from, 1);
+  for (const { ev, date } of occurrences(from, to)) {
+    if (ev.remind == null || ev.remind < 0 || !ev.start) continue;
+    const key = ev.id + "@" + date; if (fired.has(key)) continue;
+    const [h, m] = ev.start.split(":").map(Number);
+    const at = parseYmd(date); at.setHours(h, m - ev.remind, 0, 0);
+    if (now >= at && now - at < 6 * 3600e3) {
+      fired.add(key); lsSet("fired", [...fired].slice(-500));
+      const body = `${fmtTime(ev.start)}${ev.loc ? " · " + ev.loc : ""}${ev.remind ? " (in " + ev.remind + " min)" : ""}`;
+      toast("⏰ " + ev.title + " · " + body, 8000);
+      if (window.Notification && Notification.permission === "granted") {
+        try { new Notification(ev.title, { body, tag: key }); }
+        catch { navigator.serviceWorker?.ready.then(r => r.showNotification(ev.title, { body, tag: key })); }
+      }
+    }
+  }
+}
+setInterval(checkReminders, 30000);
+
+/* ---------- views ---------- */
+const V = {};
+V.dash = () => {
+  const ls = lists(), w = wishItems(), wd = w.filter(i => i.done).length;
+  const up = occurrences(today(), addDays(today(), 7)).slice(0, 6);
+  let h = `<div class="section"><h2>Coming up <small>next 7 days</small></h2><div class="card">`;
+  h += up.length ? up.map(({ ev, date }) => `<div class="evrow" data-ev="${ev.id}"><div class="when"><b>${date === today() ? "Today" : fmtDate(date, { weekday: "short", day: "numeric" })}</b>${fmtTime(ev.start)}</div>
+      <div class="sp"><div>${esc(ev.title)} ${ev.cat === "work" ? '<span class="pill work">work</span>' : ""}</div>${ev.loc ? `<div class="small muted">${esc(ev.loc)}</div>` : ""}</div></div>`).join("")
+    : `<div class="empty">Nothing scheduled. Add things in Calendar.</div>`;
+  h += `</div></div><div class="section"><h2>Lists</h2><div class="grid">`;
+  for (const l of ls) {
+    const { t, d } = listStats(l), open = l.items.filter(i => !i.done).slice(0, 4);
+    h += `<div class="card sq" data-go="#list/${l.id.slice(5)}"><h3>${esc(l.title)}</h3><div class="mini">${open.map(i => `<div>○ ${esc(i.text)}</div>`).join("") || (t ? '<div class="pill ok">all done</div>' : '<div>empty</div>')}</div>
+      <div class="foot"><span>${d}/${t}</span>${ring(d, t, 56)}</div></div>`;
+  }
+  const due = w.filter(i => !i.done && i.by).slice(0, 3);
+  h += `<div class="card sq" data-go="#wish"><h3>Wishlist</h3><div class="mini">${due.map(i => `<div>${daysUntil(i.by) < 0 ? "⚠ " : ""}${esc(i.name)} · ${fmtDate(i.by, { month: "short", day: "numeric" })}</div>`).join("") || (w.length ? '<div>' + (w.length - wd) + ' to buy</div>' : "<div>empty</div>")}</div>
+    <div class="foot"><span>${wd}/${w.length} bought</span>${ring(wd, w.length, 56)}</div></div>`;
+  h += `<div class="card sq add" data-act="newlist">+ New list</div></div></div>`;
+  return h;
+};
+V.lists = () => {
+  const ls = lists();
+  let h = `<h2>Lists</h2><div class="grid">`;
+  for (const l of ls) { const { t, d } = listStats(l); h += `<div class="card sq" data-go="#list/${l.id.slice(5)}"><h3>${esc(l.title)}</h3><div class="mini">${l.items.filter(i => !i.done).slice(0, 5).map(i => `<div>○ ${esc(i.text)}</div>`).join("")}</div><div class="foot"><span>${d}/${t}</span>${ring(d, t, 56)}</div></div>`; }
+  h += `<div class="card sq add" data-act="newlist">+ New list</div></div>`;
+  return h;
+};
+V.list = id => {
+  const l = get("list:" + id); if (!l) return `<div class="empty">List not found. <a href="#lists">Back</a></div>`;
+  const { t, d } = listStats(l);
+  let h = `<div class="row" style="margin-bottom:8px"><button class="ghost" data-go="#lists">‹ Lists</button><span class="sp"></span><button class="ghost" data-act="clearDone">Clear done</button><button class="ghost danger" data-act="delList">Delete</button></div>
+  <div class="card"><div class="row"><input class="title-in sp" value="${esc(l.title)}" data-act="title" placeholder="List title"><div class="row" style="gap:6px"><span class="muted small">${d}/${t}</span>${ring(d, t, 72, true)}</div></div>`;
+  h += `<div style="margin-top:10px">`;
+  for (const it of l.items) h += `<div class="item${it.done ? " done" : ""}" data-item="${it.id}"><input type="checkbox" ${it.done ? "checked" : ""} data-act="tick"><input class="txt" value="${esc(it.text)}" data-act="text"><button class="x" data-act="delItem" title="Remove">×</button></div>`;
+  if (!l.items.length) h += `<div class="empty">No items yet.</div>`;
+  h += `</div><form class="addrow" data-act="addItem"><input placeholder="Add an item and press Enter" autocomplete="off"><button class="primary">Add</button></form></div>`;
+  return h;
+};
+V.wish = () => {
+  const w = wishItems(), wd = w.filter(i => i.done).length, meta = get("meta:pricebot");
+  let h = `<div class="row" style="margin-bottom:8px"><h2 style="margin:0">Wishlist</h2><span class="sp"></span><span class="muted small">${wd}/${w.length} bought</span>${ring(wd, w.length, 56)}</div>
+  <div class="card">`;
+  for (const it of w) {
+    const pr = get("price:" + it.id.slice(5)), best = pr?.offers?.[0], late = it.by && !it.done && daysUntil(it.by) < 0, open = lsGet("wopen", {})[it.id];
+    h += `<div class="wish${it.done ? " done" : ""}" data-wish="${it.id}"><div class="head"><input type="checkbox" ${it.done ? "checked" : ""} data-act="wtick"><span class="name" data-act="wopen">${esc(it.name)}</span>
+      ${best ? `<span class="pill ok">${money(best.total)} · ${esc(best.store)}</span>` : ""}<button class="ghost" data-act="wedit">Edit</button></div>
+      <div class="meta">${it.by ? `<span class="${late ? "pill late" : ""}">need by ${fmtDate(it.by)}${late ? " (late)" : ""}</span>` : ""}${it.qty > 1 ? `<span>×${it.qty}</span>` : ""}${it.budget ? `<span>budget ${money(it.budget)}</span>` : ""}${it.note ? `<span>${esc(it.note)}</span>` : ""}</div>`;
+    if (open) {
+      h += `<div class="offers">`;
+      if (pr?.offers?.length) {
+        h += `<table><tr><th>Store</th><th>Price</th><th>Ship</th><th>Tax</th><th>Total</th><th></th></tr>`;
+        pr.offers.forEach((o, i) => h += `<tr class="${i ? "" : "best"}"><td>${esc(o.store)}</td><td>${money(o.price)}</td><td>${o.ship == null ? "?" : money(o.ship)}</td><td>${money(o.tax)}</td><td>${money(o.total)}</td><td><a href="${esc(o.link)}" target="_blank" rel="noopener">open</a></td></tr>`);
+        h += `</table><div class="small muted" style="margin-top:4px">${esc(pr.title || "")} · checked ${new Date(pr.checked_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}${pr.query ? " · search: " + esc(pr.query) : ""}</div>`;
+      } else h += `<div class="small muted">No price check yet. The price bot runs on its schedule (see Settings).</div>`;
+      h += `</div>`;
+    }
+    h += `</div>`;
+  }
+  if (!w.length) h += `<div class="empty">Nothing on the wishlist yet.</div>`;
+  h += `<form class="addrow" data-act="addWish"><input placeholder="Add something you need to buy" autocomplete="off"><button class="primary">Add</button></form></div>
+  <p class="small muted">Prices: the bot searches Google Shopping, keeps only trusted stores, adds estimated tax and listed shipping, and saves the cheapest few here.${meta?.ran_at ? " Last bot run " + new Date(meta.ran_at).toLocaleString() + (meta.note ? " · " + esc(meta.note) : "") : " It has not run yet."}</p>`;
+  return h;
+};
+const CAL = { y: new Date().getFullYear(), m: new Date().getMonth() };
+V.cal = () => {
+  const first = new Date(CAL.y, CAL.m, 1), start = new Date(first); start.setDate(1 - first.getDay());
+  const from = ymd(start), to = addDays(from, 41), occ = occurrences(from, to), byDay = {};
+  occ.forEach(o => (byDay[o.date] ||= []).push(o));
+  let h = `<div class="row" style="margin-bottom:8px"><button class="ghost" data-act="calPrev">‹</button><h2 style="margin:0;min-width:150px;text-align:center">${first.toLocaleDateString(undefined, { month: "long", year: "numeric" })}</h2><button class="ghost" data-act="calNext">›</button><button class="ghost" data-act="calToday">Today</button><span class="sp"></span><button class="primary" data-act="newEvent">+ Event</button></div>
+  <div class="cal">${["S", "M", "T", "W", "T", "F", "S"].map(d => `<div class="dow">${d}</div>`).join("")}`;
+  for (let i = 0; i < 42; i++) {
+    const d = addDays(from, i), dim = parseYmd(d).getMonth() !== CAL.m, evs = byDay[d] || [];
+    h += `<div class="day${dim ? " dim" : ""}${d === today() ? " today" : ""}" data-day="${d}"><div class="n">${parseYmd(d).getDate()}</div>${evs.slice(0, 3).map(o => `<div class="ev${o.ev.cat === "work" ? " work" : ""}">${fmtTime(o.ev.start)} ${esc(o.ev.title)}</div>`).join("")}${evs.length > 3 ? `<div class="ev">+${evs.length - 3}</div>` : ""}<div class="dots">${evs.slice(0, 4).map(() => "<i></i>").join("")}</div></div>`;
+  }
+  h += `</div>`;
+  const up = occurrences(today(), addDays(today(), 30));
+  h += `<div class="section" style="margin-top:18px"><div class="row"><h2 style="margin:0">Upcoming <small>30 days</small></h2><span class="sp"></span><button class="ghost" data-act="ics">Download .ics</button></div><div class="card" style="margin-top:8px">`;
+  h += up.length ? up.map(({ ev, date }) => evRow(ev, date)).join("") : `<div class="empty">No upcoming events.</div>`;
+  h += `</div><p class="small muted">Phone reminders: this app only reminds you while it is open. For guaranteed phone alerts tap "Google Calendar" on an event (or download the .ics once and import it), Google will remind you on every device.</p></div>`;
+  return h;
+};
+const evRow = (ev, date) => `<div class="evrow" data-ev="${ev.id}"><div class="when"><b>${date === today() ? "Today" : fmtDate(date)}</b>${fmtTime(ev.start)}${ev.end ? "–" + fmtTime(ev.end) : ""}</div>
+  <div class="sp"><div>${esc(ev.title)} ${ev.cat === "work" ? '<span class="pill work">work</span>' : ""}${ev.repeat && ev.repeat !== "none" ? `<span class="pill">${ev.repeat}</span>` : ""}</div>
+  <div class="small muted">${ev.loc ? esc(ev.loc) + " · " : ""}${ev.remind != null && ev.remind >= 0 ? "remind " + ev.remind + " min before" : "no reminder"}</div></div>
+  <div class="row" style="gap:2px"><a class="ghost" href="${gcalLink(ev)}" target="_blank" rel="noopener" style="font-size:12px;padding:6px">Google Calendar</a><button class="ghost" data-act="editEvent">Edit</button></div></div>`;
+function eventForm(ev = {}, date) {
+  const v = { title: "", date: date || today(), start: "09:00", end: "", loc: "", note: "", remind: 30, repeat: "none", until: "", cat: "other", ...ev };
+  const b = modal(`<h3>${ev.id ? "Edit event" : "New event"}</h3>
+    <label class="f">Title</label><input name="title" value="${esc(v.title)}" placeholder="Work shift, dentist, …">
+    <div class="two"><div><label class="f">Date</label><input type="date" name="date" value="${v.date}"></div><div><label class="f">Type</label><select name="cat"><option value="other"${v.cat === "other" ? " selected" : ""}>Other</option><option value="work"${v.cat === "work" ? " selected" : ""}>Work</option></select></div></div>
+    <div class="two"><div><label class="f">Start</label><input type="time" name="start" value="${v.start}"></div><div><label class="f">End</label><input type="time" name="end" value="${v.end}"></div></div>
+    <label class="f">Location</label><input name="loc" value="${esc(v.loc)}">
+    <div class="two"><div><label class="f">Remind</label><select name="remind">${[[-1, "No reminder"], [0, "At start"], [10, "10 min before"], [30, "30 min before"], [60, "1 hour before"], [120, "2 hours before"], [1440, "1 day before"]].map(([m, t]) => `<option value="${m}"${v.remind == m ? " selected" : ""}>${t}</option>`).join("")}</select></div>
+    <div><label class="f">Repeat</label><select name="repeat">${["none", "daily", "weekly", "biweekly", "monthly"].map(r => `<option value="${r}"${v.repeat === r ? " selected" : ""}>${r}</option>`).join("")}</select></div></div>
+    <div id="untilWrap" style="display:${v.repeat !== "none" ? "block" : "none"}"><label class="f">Repeat until (optional)</label><input type="date" name="until" value="${v.until}"></div>
+    <label class="f">Notes</label><textarea name="note" rows="2">${esc(v.note)}</textarea>
+    <div class="row" style="margin-top:14px">${ev.id ? '<button class="ghost danger" data-act="delEvent">Delete</button>' : ""}<span class="sp"></span><button class="ghost" data-act="close">Cancel</button><button class="primary" data-act="saveEvent">Save</button></div>`);
+  $("[name=repeat]", b).onchange = e => $("#untilWrap", b).style.display = e.target.value === "none" ? "none" : "block";
+  b.addEventListener("click", e => {
+    const act = e.target.dataset.act; if (!act) return;
+    if (act === "close") b.remove();
+    if (act === "delEvent") { del(ev.id); b.remove(); toast("Event deleted"); }
+    if (act === "saveEvent") {
+      const f = {}; $$("[name]", b).forEach(i => f[i.name] = i.value.trim());
+      if (!f.title) return toast("Give it a title");
+      f.remind = Number(f.remind); if (f.repeat === "none") f.until = "";
+      put(ev.id || "event:" + uid(), { ...ev, ...f, created: ev.created || Date.now() }); b.remove(); toast("Saved");
+    }
+  });
+}
+function wishForm(it = {}) {
+  const v = { name: "", by: "", qty: 1, budget: "", note: "", query: "", ...it };
+  const b = modal(`<h3>${it.id ? "Edit item" : "New item"}</h3>
+    <label class="f">Item</label><input name="name" value="${esc(v.name)}" placeholder="What you need">
+    <div class="two"><div><label class="f">Need by</label><input type="date" name="by" value="${v.by}"></div><div><label class="f">Quantity</label><input type="number" min="1" name="qty" value="${v.qty}"></div></div>
+    <div class="two"><div><label class="f">Budget ($)</label><input type="number" step="0.01" name="budget" value="${v.budget}"></div><div><label class="f">Search terms for the price bot</label><input name="query" value="${esc(v.query)}" placeholder="defaults to the item name"></div></div>
+    <label class="f">Notes</label><textarea name="note" rows="2">${esc(v.note)}</textarea>
+    <div class="row" style="margin-top:14px">${it.id ? '<button class="ghost danger" data-act="delWish">Delete</button>' : ""}<span class="sp"></span><button class="ghost" data-act="close">Cancel</button><button class="primary" data-act="saveWish">Save</button></div>`);
+  b.addEventListener("click", e => {
+    const act = e.target.dataset.act; if (!act) return;
+    if (act === "close") b.remove();
+    if (act === "delWish") { del(it.id); b.remove(); }
+    if (act === "saveWish") {
+      const f = {}; $$("[name]", b).forEach(i => f[i.name] = i.value.trim());
+      if (!f.name) return toast("Name the item");
+      f.qty = Math.max(1, Number(f.qty) || 1); f.budget = f.budget ? Number(f.budget) : "";
+      put(it.id || "wish:" + uid(), { ...it, ...f, done: it.done || false, created: it.created || Date.now() }); b.remove();
+    }
+  });
+}
+V.settings = () => {
+  const c = SYNC.cfg || {}, pb = get("settings:pricebot") || {}, theme = lsGet("theme", "system"), meta = get("meta:pricebot");
+  return `<h2>Settings</h2>
+  <div class="card section"><h3 style="margin:0 0 4px">Sync between devices</h3><p class="small muted" style="margin:0 0 6px">Supabase project (free). Run <code>supabase/setup.sql</code> once, then enter the values here on each device. Status: <span id="syncStatus">${esc(SYNC.msg)}</span></p>
+    <label class="f">Project URL</label><input id="sUrl" value="${esc(c.url || "")}" placeholder="https://xxxx.supabase.co">
+    <label class="f">Anon key</label><input id="sKey" value="${esc(c.key || "")}" placeholder="eyJ…">
+    <label class="f">Secret word (the one you put in setup.sql)</label><input id="sSecret" value="${esc(c.secret || "")}">
+    <div class="row" style="margin-top:10px"><button class="primary" data-act="connect">${SYNC.cfg ? "Reconnect" : "Connect"}</button>${SYNC.cfg ? '<button class="ghost danger" data-act="disconnect">Disconnect</button>' : ""}</div></div>
+  <div class="card section"><h3 style="margin:0 0 4px">Reminders</h3><p class="small muted">Status: ${window.Notification ? Notification.permission : "not supported here"}. On iPhone, notifications only work after adding Hub to the home screen.</p>
+    <div class="row"><button data-act="notifOn">Enable notifications</button><button class="ghost" data-act="notifTest">Test</button></div></div>
+  <div class="card section"><h3 style="margin:0 0 4px">Price bot</h3><p class="small muted" style="margin:0 0 6px">A script (<code>pricebot/price_check.py</code>) runs on a schedule, reads your wishlist from Supabase and writes the cheapest trusted offers back. These settings are read by the bot.${meta?.ran_at ? " Last run " + new Date(meta.ran_at).toLocaleString() + "." : ""}</p>
+    <div class="two"><div><label class="f">Sales tax rate (%)</label><input id="pbTax" type="number" step="0.01" value="${pb.tax_pct ?? 7.5}"></div><div><label class="f">Re-check each item every (days)</label><input id="pbDays" type="number" min="1" value="${pb.recheck_days ?? 3}"></div></div>
+    <label class="f">Trusted stores (one per line, matched against the store name)</label><textarea id="pbStores" rows="5">${esc((pb.stores || DEFAULT_STORES).join("\n"))}</textarea>
+    <div class="row" style="margin-top:10px"><button class="primary" data-act="savePb">Save</button></div></div>
+  <div class="card section"><h3 style="margin:0 0 4px">Appearance</h3><div class="row">${["system", "light", "dark"].map(t => `<button class="${theme === t ? "primary" : ""}" data-act="theme" data-v="${t}">${t}</button>`).join("")}</div></div>
+  <div class="card section"><h3 style="margin:0 0 4px">Data</h3><div class="row wrap"><button data-act="export">Export JSON</button><button data-act="import">Import JSON</button><button class="ghost danger" data-act="wipe">Wipe this device</button></div>
+    <p class="small muted" style="margin:10px 0 0">Hub v${APP_VERSION} · ${/iPhone|iPad/.test(navigator.userAgent) ? "iOS" : navigator.platform} · ${matchMedia("(display-mode: standalone)").matches ? "installed app" : "browser tab"}<br><details><summary>Changelog</summary>${CHANGELOG.map(l => `<div>${esc(l)}</div>`).join("")}</details></p></div>`;
+};
+const DEFAULT_STORES = ["Amazon.com", "Walmart", "Target", "Best Buy", "Costco", "Home Depot", "Lowe's", "B&H Photo", "Newegg", "Micro Center", "REI", "Dick's Sporting Goods", "Apple", "Staples", "Office Depot", "Kohl's", "Macy's", "Nike", "Adidas", "GameStop", "Chewy", "Petco", "Sam's Club", "Academy Sports", "Backcountry"];
+
+/* ---------- router + render ---------- */
+function route() { const h = location.hash.replace(/^#/, "") || "dash"; const [name, ...rest] = h.split("/"); return { name: V[name] ? name : "dash", arg: rest.join("/") }; }
+function render() {
+  const { name, arg } = route(); const tab = name === "list" ? "lists" : name;
+  $$("#tabs a").forEach(a => a.classList.toggle("on", a.dataset.t === tab));
+  $("#hTitle").textContent = { dash: "Hub", lists: "Lists", list: "List", wish: "Wishlist", cal: "Calendar", settings: "Settings" }[name];
+  const main = $("#view"), active = document.activeElement, keep = active && main.contains(active) && active.dataset.act === "text" ? active.closest("[data-item]")?.dataset.item : null, sel = keep ? [active.selectionStart, active.selectionEnd] : null;
+  main.innerHTML = V[name](arg);
+  if (keep) { const el = $(`[data-item="${keep}"] .txt`, main); if (el) { el.focus(); el.setSelectionRange(...sel); } }
+}
+addEventListener("hashchange", render);
+
+/* ---------- event handling (delegated) ---------- */
+$("#view").addEventListener("click", e => {
+  const go = e.target.closest("[data-go]"); if (go && !e.target.closest("button,input,a")) { location.hash = go.dataset.go; return; }
+  const t = e.target.closest("[data-act]"); const act = t?.dataset.act; const { arg } = route();
+  if (act === "newlist") { const id = newList("New list"); location.hash = "#list/" + id.slice(5); setTimeout(() => { const i = $(".title-in"); i?.focus(); i?.select(); }, 50); return; }
+  if (act === "delList") { if (confirm("Delete this list?")) { del("list:" + arg); location.hash = "#lists"; } return; }
+  if (act === "clearDone") { patch("list:" + arg, l => l.items = l.items.filter(i => !i.done)); return; }
+  if (act === "tick") { const iid = t.closest("[data-item]").dataset.item; patch("list:" + arg, l => { const it = l.items.find(i => i.id === iid); it.done = t.checked; it.doneAt = t.checked ? Date.now() : null; }); return; }
+  if (act === "delItem") { const iid = t.closest("[data-item]").dataset.item; patch("list:" + arg, l => l.items = l.items.filter(i => i.id !== iid)); return; }
+  if (act === "wtick") { patch(t.closest("[data-wish]").dataset.wish, w => { w.done = t.checked; w.doneAt = t.checked ? Date.now() : null; }); return; }
+  if (act === "wopen") { const id = t.closest("[data-wish]").dataset.wish, o = lsGet("wopen", {}); o[id] = !o[id]; lsSet("wopen", o); render(); return; }
+  if (act === "wedit") { wishForm(get(t.closest("[data-wish]").dataset.wish) && { id: t.closest("[data-wish]").dataset.wish, ...get(t.closest("[data-wish]").dataset.wish) }); return; }
+  if (act === "calPrev") { CAL.m--; if (CAL.m < 0) { CAL.m = 11; CAL.y--; } render(); return; }
+  if (act === "calNext") { CAL.m++; if (CAL.m > 11) { CAL.m = 0; CAL.y++; } render(); return; }
+  if (act === "calToday") { CAL.y = new Date().getFullYear(); CAL.m = new Date().getMonth(); render(); return; }
+  if (act === "newEvent") { eventForm({}); return; }
+  if (act === "editEvent") { const id = t.closest("[data-ev]").dataset.ev; eventForm({ id, ...get(id) }); return; }
+  if (act === "ics") { icsAll(); return; }
+  const day = e.target.closest("[data-day]");
+  if (day) { dayModal(day.dataset.day); return; }
+  const evr = e.target.closest("[data-ev]"); if (evr && route().name === "dash") { eventForm({ id: evr.dataset.ev, ...get(evr.dataset.ev) }); return; }
+  /* settings */
+  if (act === "connect") { const cfg = { url: $("#sUrl").value.trim(), key: $("#sKey").value.trim(), secret: $("#sSecret").value.trim() }; if (!cfg.url || !cfg.key || !cfg.secret) return toast("Fill in all three values"); connect(cfg).then(ok => { toast(ok ? "Connected" : "Could not connect: " + SYNC.msg, 5000); render(); }); return; }
+  if (act === "disconnect") { disconnect(); render(); return; }
+  if (act === "notifOn") { if (!window.Notification) return toast("Not supported in this browser"); Notification.requestPermission().then(p => { toast("Notifications " + p); render(); }); return; }
+  if (act === "notifTest") { if (Notification?.permission !== "granted") return toast("Enable them first"); try { new Notification("Hub", { body: "Reminders work here." }); } catch { navigator.serviceWorker?.ready.then(r => r.showNotification("Hub", { body: "Reminders work here." })); } return; }
+  if (act === "savePb") { put("settings:pricebot", { tax_pct: Number($("#pbTax").value) || 0, recheck_days: Math.max(1, Number($("#pbDays").value) || 3), stores: $("#pbStores").value.split("\n").map(s => s.trim()).filter(Boolean) }); toast("Saved"); return; }
+  if (act === "theme") { lsSet("theme", t.dataset.v); applyTheme(); render(); return; }
+  if (act === "export") { const blob = new Blob([JSON.stringify({ version: APP_VERSION, docs: DB.docs }, null, 1)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "hub-" + today() + ".json"; a.click(); return; }
+  if (act === "import") { const i = document.createElement("input"); i.type = "file"; i.accept = ".json"; i.onchange = async () => { try { const j = JSON.parse(await i.files[0].text()); let n = 0; for (const [id, d] of Object.entries(j.docs || {})) { put(id, d.data, { quiet: true }); n++; } render(); toast("Imported " + n + " records"); } catch (e) { toast("Import failed: " + e.message); } }; i.click(); return; }
+  if (act === "wipe") { if (confirm("Remove all Hub data from this device? (Synced data stays on the server.)")) { localStorage.clear(); location.reload(); } return; }
+});
+$("#view").addEventListener("change", e => {
+  const { arg } = route(), t = e.target;
+  if (t.dataset.act === "title") patch("list:" + arg, l => l.title = t.value.trim() || "Untitled");
+  if (t.dataset.act === "text") { const iid = t.closest("[data-item]").dataset.item; patch("list:" + arg, l => { const it = l.items.find(i => i.id === iid); if (it) it.text = t.value.trim(); }); }
+});
+$("#view").addEventListener("submit", e => {
+  e.preventDefault(); const f = e.target, inp = $("input", f), v = inp.value.trim(); if (!v) return;
+  if (f.dataset.act === "addItem") { patch("list:" + route().arg, l => l.items.push({ id: uid(), text: v, done: false, created: Date.now() })); setTimeout(() => $(".addrow input")?.focus(), 0); }
+  if (f.dataset.act === "addWish") { put("wish:" + uid(), { name: v, by: "", qty: 1, budget: "", note: "", done: false, created: Date.now() }); setTimeout(() => $(".addrow input")?.focus(), 0); }
+});
+$("#view").addEventListener("keydown", e => {
+  if (e.key === "Enter" && e.target.dataset.act === "text") { e.target.blur(); $(".addrow input")?.focus(); }
+  if (e.key === "Enter" && e.target.dataset.act === "title") { e.target.blur(); }
+});
+function dayModal(d) {
+  const occ = occurrences(d, d);
+  const b = modal(`<h3>${fmtDate(d, { weekday: "long", month: "long", day: "numeric" })}</h3>
+    ${occ.length ? occ.map(({ ev }) => `<div class="evrow" data-ev="${ev.id}"><div class="when"><b>${fmtTime(ev.start) || "all day"}</b>${ev.end ? fmtTime(ev.end) : ""}</div><div class="sp">${esc(ev.title)}${ev.loc ? `<div class="small muted">${esc(ev.loc)}</div>` : ""}</div><button class="ghost" data-act="edit">Edit</button></div>`).join("") : `<div class="muted small">Nothing on this day.</div>`}
+    <div class="row" style="margin-top:14px"><span class="sp"></span><button class="ghost" data-act="close">Close</button><button class="primary" data-act="add">+ Add event</button></div>`);
+  b.addEventListener("click", e => {
+    const act = e.target.dataset.act; if (!act) return; b.remove();
+    if (act === "add") eventForm({}, d);
+    if (act === "edit") { const id = e.target.closest("[data-ev]").dataset.ev; eventForm({ id, ...get(id) }); }
+  });
+}
+
+/* ---------- boot ---------- */
+function applyTheme() { const t = lsGet("theme", "system"); if (t === "system") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t; }
+applyTheme();
+if (!Object.keys(DB.docs).length && !SYNC.cfg) {   // first run: a starter list so the dashboard is not empty
+  put("list:" + uid(), { title: "Groceries", items: [{ id: uid(), text: "Eggs", done: false }, { id: uid(), text: "Milk", done: true }], created: Date.now(), order: 0 }, { quiet: true });
+}
+render();
+checkReminders();
+if (SYNC.cfg) { setSync("busy", "Connecting…"); pull().then(() => push()).then(startSyncLoop); }
+if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
+window.hubdbg = () => ({ v: APP_VERSION, DB, SYNC });
+}
+</script>
+</body>
+</html>

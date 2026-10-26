@@ -1,0 +1,22 @@
+name: price bot
+on:
+  schedule:
+    - cron: "30 11 * * *"   # daily 11:30 UTC (7:30am ET)
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  prices:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python pricebot/price_check.py
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          HUB_SECRET: ${{ secrets.HUB_SECRET }}
+          SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
+          MAX_SEARCHES: "3"
