@@ -29,8 +29,7 @@ Edits upload within a second and other devices pick them up within 5 s while ope
 ### 4. Price bot (optional)
 1. Get a free SerpApi key (serpapi.com, 100 searches/month).
 2. Repo > Settings > Secrets and variables > Actions, add: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `HUB_SECRET`, `SERPAPI_KEY`.
-3. Move `pricebot/github-workflow-prices.yml` to `.github/workflows/prices.yml` and push (needs a token with the
-   `workflow` scope: `gh auth refresh -h github.com -s workflow`). It then runs every morning (7:30 ET) and can be run by hand from the Actions tab.
+3. The `price bot` workflow (`.github/workflows/prices.yml`) runs every morning (7:30 ET) once those secrets exist, and can be run by hand from the Actions tab.
    It searches at most 3 items per run (soonest need-by first) and re-checks each item every 3 days, so the free tier lasts.
 4. In Hub > Settings > Price bot you can change the tax rate, the recheck interval and the trusted-store list.
 
