@@ -364,7 +364,8 @@ kbd{font:11px Inter;border:1px solid var(--line2);border-bottom-width:2px;border
 .gbar{height:8px;border-radius:99px;background:var(--ring-bg);overflow:hidden;margin-top:6px}
 .gbar i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--lc,var(--accent)),color-mix(in srgb,var(--lc,var(--accent)) 55%,#fff));transition:width .9s var(--ease)}
 .gbar i.done{background:var(--ok)}
-.gbig{padding:14px 4px;cursor:default}.gbig .gh{font-size:16px;font-weight:700}.gbig .gbar{height:10px;margin-top:8px}
+.gbig{padding:14px 4px;cursor:default}
+@media (max-width:640px){.gbig .gh{flex-wrap:wrap}.gbig .gh small{flex-basis:100%;margin-left:26px}}.gbig .gh{font-size:16px;font-weight:700}.gbig .gbar{height:10px;margin-top:8px}
 .gctl{display:flex;gap:6px;align-items:center;margin-top:10px;flex-wrap:wrap}.gctl .btn{padding:6px 12px}
 .tiles{display:grid;grid-template-columns:1fr;gap:10px}
 @media (min-width:480px){.tiles{grid-template-columns:1fr 1fr}}
@@ -389,25 +390,57 @@ kbd{font:11px Inter;border:1px solid var(--line2);border-bottom-width:2px;border
 @media (max-width:899px){.presets{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}.presets::-webkit-scrollbar{display:none}.presets .pchip,.presets .btn{flex:none}}
 .emojis{max-height:170px;overflow:auto;padding:2px}
 .bak{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}.bak:last-child{border-bottom:0}
+
+/* backdrops */
+html{background:var(--bg)}
+body.photo{background-color:transparent;background-image:none}
+.bgphoto{position:fixed;inset:-20px;z-index:-1;background-position:center;background-size:cover;pointer-events:none;transition:opacity .4s}
+.bgphoto.blur{filter:blur(14px) saturate(1.1)}
+body.photo .side{background:color-mix(in srgb,var(--bg2) 82%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+body.photo .card{background:color-mix(in srgb,var(--card) 94%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.hero.cover{background-size:cover;background-position:center}
+.hero.cover::before,.hero.cover::after{display:none}
+.hero.cover>*{position:relative;z-index:1}
+.hero.cover .coverlay{position:absolute;inset:0;background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 78%,transparent),color-mix(in srgb,var(--accent-2) 55%,transparent));z-index:0}
+.side .art{margin:14px -14px 0;opacity:.9}
+.side .art svg{width:100%;height:auto;display:block}
+.bdgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}
+.bd{aspect-ratio:4/3;border-radius:12px;border:2px solid var(--line);cursor:pointer;background:var(--bg) center/cover;position:relative;overflow:hidden;transition:transform .2s var(--spring),border-color .2s}
+.bd:hover{transform:translateY(-2px)}.bd.on{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.bd span{position:absolute;left:0;right:0;bottom:0;font-size:11px;font-weight:600;padding:3px 6px;background:color-mix(in srgb,var(--card) 80%,transparent)}
+input[type=range]{width:100%;accent-color:var(--accent)}
+/* sub-goals */
+.subs{margin:8px 0 0 2px}
+.sub{display:flex;align-items:center;gap:8px;padding:5px 2px;font-size:13.5px}
+.sub .chk{width:20px;height:20px}.sub .chk svg{width:12px;height:12px}
+.sub .st{flex:1;min-width:0;position:relative;transition:color .3s}
+.sub .st::after{content:"";position:absolute;left:0;top:50%;height:1.5px;width:0;background:var(--muted);transition:width .35s var(--ease)}
+.sub.done .st{color:var(--muted)}.sub.done .st::after{width:100%}
+.sub .x{opacity:0;border:0;background:none;color:var(--muted);padding:2px;border-radius:6px;cursor:pointer;display:flex}
+.sub:hover .x{opacity:1}@media (hover:none){.sub .x{opacity:.6}}
+.subadd{display:flex;gap:6px;margin-top:4px}.subadd .in{padding:6px 10px;font-size:13px}
 @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
 </head>
 <body>
 <div class="app">
   <aside class="side">
-    <div class="brand"><img src="icon.svg" alt="">Hub</div>
+    <div class="brand"><img src="icon.svg" alt=""><span id="brandName">Hub</span></div>
     <nav id="sideNav"><div class="ind"></div></nav>
+    <div class="art" id="sideArt"></div>
     <div class="foot"><div class="row"><span class="dot" id="syncDot"></span><span id="syncText">Not connected</span></div><div class="row"><span class="sp"></span><button class="btn ghost icon" data-act="toggleTheme" title="Toggle theme" id="themeBtn"></button></div></div>
   </aside>
   <div class="content"><div id="view" class="view"></div></div>
 </div>
 <nav class="tabbar" id="tabbar"><div class="ind"></div></nav>
+<div class="bgphoto" id="bgphoto" hidden></div>
 <div id="fabWrap"></div>
 <div id="toasts"></div>
 <script>
 {
-const APP_VERSION = "0.5.0";
+const APP_VERSION = "0.6.0";
 const CHANGELOG = [
+  "0.6.0 backdrops: six hand-drawn scenes that follow your accent (mountains, topo, stars, holds, leaves, dots) or your own photo with intensity + blur, optional cover on the greeting card; sidebar ridge illustration; sub-goals (checklist steps under a goal); app name setting",
   "0.5.0 Goals section + Goals card top-right on Home; Training card top-left fed by V6 Trainer; presets panel on the right of the calendar; phone gets its own tabs again with a compact Home; Home button on every page; Sora headings + dotted background; Halloween emojis + any emoji; automatic local backups on every update",
   "0.4.0 calendar: month / week / day / year views with a time grid and now-line; shift presets (Open CI, Close CI, Open FD, Close FD) you arm and drop onto days; undo toasts",
   "0.3.0 tap a row to tick it, rename only on the word; Lists folded into Home; price bot every N minutes with a monthly search budget",
@@ -659,12 +692,53 @@ setInterval(checkReminders, 30000);
 setInterval(() => { const n = $("#view .now"); if (n) { const t = new Date(); n.style.top = ((t.getHours() * 60 + t.getMinutes() - START_H * 60) / 60 * HOUR_PX) + "px"; } }, 60000);
 
 
+
+/* ---------- backdrops (drawn in code so they follow the accent + theme) ---------- */
+function prng(seed) { let x = seed; return () => (x = (x * 1664525 + 1013904223) % 4294967296) / 4294967296; }
+const svgUri = svg => "url(\"data:image/svg+xml;utf8," + encodeURIComponent(svg).replace(/%20/g, " ") + "\")";
+const BACKDROPS = {
+  none: { name: "None", css: () => ({ backgroundImage: "none" }) },
+  dots: { name: "Dots", css: () => ({ backgroundImage: "radial-gradient(color-mix(in srgb,var(--text) 6%,transparent) 1px,transparent 1.5px)", backgroundSize: "22px 22px" }) },
+  topo: { name: "Topo", css: a => { const r = prng(7); let p = ""; for (let i = 0; i < 9; i++) { const y = 40 + i * 62, amp = 14 + r() * 22; p += `<path d="M-20 ${y} ${[...Array(9)].map((_, k) => `Q ${k * 80 + 40} ${y + (k % 2 ? amp : -amp) * (0.6 + r() * 0.8)} ${k * 80 + 80} ${y}`).join(" ")}" fill="none" stroke="${a}" stroke-opacity=".16" stroke-width="1.3"/>`; }
+    return { backgroundImage: svgUri(`<svg xmlns="http://www.w3.org/2000/svg" width="640" height="600" viewBox="0 0 640 600">${p}</svg>`), backgroundSize: "640px 600px" }; } },
+  mountains: { name: "Mountains", css: a => { const layer = (pts, o) => `<path d="M0 320 ${pts} L1440 320 Z" fill="${a}" fill-opacity="${o}"/>`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="320" viewBox="0 0 1440 320" preserveAspectRatio="none">
+      ${layer("L0 230 L120 160 L210 210 L330 110 L420 170 L520 90 L640 190 L760 120 L860 180 L980 70 L1100 160 L1200 130 L1320 190 L1440 110 L1440 320", .08)}
+      ${layer("L0 270 L90 230 L200 260 L300 200 L400 250 L520 190 L600 240 L720 180 L840 250 L940 210 L1060 260 L1180 200 L1280 250 L1440 190 L1440 320", .13)}
+      ${layer("L0 300 L100 280 L220 295 L340 265 L470 290 L580 260 L700 288 L820 262 L960 292 L1080 270 L1220 295 L1340 272 L1440 290 L1440 320", .2)}
+      <circle cx="1180" cy="60" r="22" fill="${a}" fill-opacity=".18"/></svg>`;
+    return { backgroundImage: svgUri(svg), backgroundSize: "100% auto", backgroundRepeat: "no-repeat", backgroundPosition: "bottom", backgroundAttachment: "fixed" }; } },
+  stars: { name: "Stars", css: a => { const r = prng(3); let p = ""; for (let i = 0; i < 70; i++) { const x = r() * 480, y = r() * 480, s = .6 + r() * 1.6; p += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${s.toFixed(1)}" fill="${a}" fill-opacity="${(.15 + r() * .35).toFixed(2)}"/>`; }
+    for (let i = 0; i < 5; i++) { const x = r() * 480, y = r() * 480, s = 5 + r() * 6; p += `<path d="M${x} ${y - s} Q${x} ${y} ${x + s} ${y} Q${x} ${y} ${x} ${y + s} Q${x} ${y} ${x - s} ${y} Q${x} ${y} ${x} ${y - s}Z" fill="${a}" fill-opacity=".35"/>`; }
+    return { backgroundImage: svgUri(`<svg xmlns="http://www.w3.org/2000/svg" width="480" height="480" viewBox="0 0 480 480">${p}</svg>`), backgroundSize: "480px 480px" }; } },
+  holds: { name: "Climbing holds", css: a => { const r = prng(11); let p = ""; const shapes = ["M0 -22 C 18 -26 30 -6 24 10 C 18 26 -6 28 -18 16 C -30 4 -22 -18 0 -22Z", "M-26 -6 C -14 -22 14 -24 26 -8 C 30 6 14 20 -2 18 C -18 16 -32 8 -26 -6Z", "M-10 -24 C 10 -30 28 -12 22 6 C 16 24 -10 30 -22 14 C -32 0 -26 -18 -10 -24Z", "M-24 0 C -24 -18 -4 -26 12 -18 C 28 -10 26 12 10 20 C -8 28 -24 16 -24 0Z"];
+    for (let i = 0; i < 14; i++) { const x = 40 + r() * 400, y = 40 + r() * 400, sc = .7 + r() * .9, rot = r() * 360; p += `<g transform="translate(${x.toFixed(0)} ${y.toFixed(0)}) rotate(${rot.toFixed(0)}) scale(${sc.toFixed(2)})"><path d="${shapes[i % 4]}" fill="${a}" fill-opacity=".06" stroke="${a}" stroke-opacity=".15" stroke-width="1.5"/><circle cx="0" cy="0" r="3" fill="none" stroke="${a}" stroke-opacity=".2"/></g>`; }
+    return { backgroundImage: svgUri(`<svg xmlns="http://www.w3.org/2000/svg" width="480" height="480" viewBox="0 0 480 480">${p}</svg>`), backgroundSize: "480px 480px" }; } },
+  leaves: { name: "Autumn leaves", css: () => { const r = prng(5); const cols = ["#f97316", "#ef4444", "#f59e0b", "#b45309"]; let p = "";
+    for (let i = 0; i < 16; i++) { const x = r() * 480, y = r() * 480, sc = .6 + r() * .8, rot = r() * 360, c = cols[i % 4]; p += `<g transform="translate(${x.toFixed(0)} ${y.toFixed(0)}) rotate(${rot.toFixed(0)}) scale(${sc.toFixed(2)})"><path d="M0 -26 C 14 -18 20 -4 14 12 C 8 24 -8 24 -14 12 C -20 -4 -14 -18 0 -26Z M0 -22 L0 20" fill="${c}" fill-opacity=".14" stroke="${c}" stroke-opacity=".3" stroke-width="1.2"/></g>`; }
+    return { backgroundImage: svgUri(`<svg xmlns="http://www.w3.org/2000/svg" width="480" height="480" viewBox="0 0 480 480">${p}</svg>`), backgroundSize: "480px 480px" }; } },
+};
+const SIDE_ART = a => `<svg viewBox="0 0 240 120" xmlns="http://www.w3.org/2000/svg"><path d="M0 100 L30 70 L55 85 L85 45 L110 65 L140 30 L170 60 L200 40 L240 75 L240 120 L0 120Z" fill="${a}" fill-opacity=".10"/><path d="M0 100 L30 70 L55 85 L85 45 L110 65 L140 30 L170 60 L200 40 L240 75" fill="none" stroke="${a}" stroke-opacity=".45" stroke-width="1.5" stroke-linejoin="round"/><g stroke="${a}" stroke-opacity=".8" stroke-width="1.6" stroke-linecap="round" fill="none"><circle cx="139" cy="19" r="2.6"/><path d="M139 22 L139 31 M139 25 L133 29 M139 25 L145 22 M139 31 L135 37 M139 31 L144 36"/></g><circle cx="205" cy="18" r="7" fill="${a}" fill-opacity=".25"/></svg>`;
+function applyBackdrop() {
+  const p = PREF(), kind = p.backdrop || "dots", a = (ACCENTS[p.accent] || ACCENTS.indigo)[0], b = document.body, ph = $("#bgphoto");
+  ["backgroundImage", "backgroundSize", "backgroundRepeat", "backgroundPosition", "backgroundAttachment"].forEach(k => b.style[k] = "");
+  const photo = lsGet("bgimg", null);
+  if (kind === "photo" && photo) { b.classList.add("photo"); ph.hidden = false; ph.style.backgroundImage = `url(${photo})`; ph.style.opacity = (p.bgIntensity ?? 60) / 100; ph.classList.toggle("blur", !!p.bgBlur); }
+  else { b.classList.remove("photo"); ph.hidden = true; const d = BACKDROPS[kind] || BACKDROPS.dots; Object.assign(b.style, d.css(a)); }
+  const art = $("#sideArt"); if (art) art.innerHTML = p.sideArt === false ? "" : SIDE_ART(a);
+  const bn = $("#brandName"); if (bn) bn.textContent = p.appName || "Hub"; document.title = p.appName || "Hub";
+}
+function loadPhoto(file) {
+  return new Promise((res, rej) => { const img = new Image(); img.onload = () => { const max = 1800, k = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); res(c.toDataURL("image/jpeg", 0.82)); }; img.onerror = rej; img.src = URL.createObjectURL(file); });
+}
+
 /* ---------- goals ---------- */
 const goals = () => all("goal:").sort((a, b) => ((a.done ? 1 : 0) - (b.done ? 1 : 0)) || ((a.due || "9999") < (b.due || "9999") ? -1 : 1) || ((a.created || 0) - (b.created || 0)));
-const goalPct = g => g.done ? 1 : g.target ? Math.min(1, (g.current || 0) / g.target) : 0;
+const subStats = g => { const t = (g.subs || []).length, d = (g.subs || []).filter(x => x.done).length; return { t, d }; };
+const goalPct = g => { if (g.done) return 1; if (g.target) return Math.min(1, (g.current || 0) / g.target); const { t, d } = subStats(g); return t ? d / t : 0; };
 const fmtNum = n => Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
-const goalMeta = g => `${g.target ? `${fmtNum(g.current)} / ${fmtNum(g.target)}${g.unit ? " " + esc(g.unit) : ""}` : g.done ? "done" : "in progress"}${g.due && !g.done ? ` · ${relDay(g.due)}` : ""}`;
-const goalRow = (g, big) => `<div class="goal${big ? " gbig" : ""}" data-goal="${g.id}" style="--lc:${g.color || COLORS[0]}"><div class="gh"><span>${g.emoji || "🎯"}</span><span class="gt${g.done ? " muted" : ""}">${esc(g.title)}</span><small>${goalMeta(g)}</small></div><div class="gbar"><i class="${g.done ? "done" : ""}" data-w="${goalPct(g) * 100}"></i></div>${big ? `<div class="gctl">${g.target ? `<button class="btn" data-act="gdec">−${fmtNum(g.step || 1)}</button><button class="btn primary" data-act="ginc">+${fmtNum(g.step || 1)}</button>` : ""}<button class="btn ghost" data-act="gdone">${g.done ? "Reopen" : "Mark done"}</button><span class="sp"></span><button class="btn ghost icon" data-act="gedit">${I.edit}</button></div>` : ""}</div>`;
+const goalMeta = g => { const { t, d } = subStats(g); return `${g.target ? `${fmtNum(g.current)} / ${fmtNum(g.target)}${g.unit ? " " + esc(g.unit) : ""}` : t ? `${d}/${t} steps` : g.done ? "done" : "in progress"}${g.target && t ? ` · ${d}/${t} steps` : ""}${g.due && !g.done ? ` · ${relDay(g.due)}` : ""}`; };
+const goalRow = (g, big) => `<div class="goal${big ? " gbig" : ""}" data-goal="${g.id}" style="--lc:${g.color || COLORS[0]}"><div class="gh"><span>${g.emoji || "🎯"}</span><span class="gt${g.done ? " muted" : ""}">${esc(g.title)}</span><small>${goalMeta(g)}</small></div><div class="gbar"><i class="${g.done ? "done" : ""}" data-w="${goalPct(g) * 100}"></i></div>${big ? `<div class="subs">${(g.subs || []).map(x => `<div class="sub${x.done ? " done" : ""}" data-sub="${x.id}"><button class="chk" role="checkbox" aria-checked="${!!x.done}" data-act="stick">${I.check}</button><span class="st">${esc(x.text)}</span><button class="x" data-act="sdel">${I.x}</button></div>`).join("")}<form class="subadd" data-act="addSub"><input class="in" placeholder="Add a step…" autocomplete="off"><button class="btn ghost" type="submit">${I.plus}</button></form></div><div class="gctl">${g.target ? `<button class="btn" data-act="gdec">−${fmtNum(g.step || 1)}</button><button class="btn primary" data-act="ginc">+${fmtNum(g.step || 1)}</button>` : ""}<button class="btn ghost" data-act="gdone">${g.done ? "Reopen" : "Mark done"}</button><span class="sp"></span><button class="btn ghost icon" data-act="gedit">${I.edit}</button></div>` : ""}</div>`;
 const goalsCard = () => { const gs = goals().filter(g => !g.done).slice(0, 3), n = goals().length; return `<div class="card tcard" data-go="#goals"><div class="lbl">Goals</div>${gs.map(g => goalRow(g)).join("") || `<div class="muted small" style="padding:8px 0">No goals yet. Tap to add one.</div>`}<div class="small muted" style="margin-top:auto">${n ? `${goals().filter(g => g.done).length}/${n} reached · ` : ""}tap to manage</div></div>`; };
 function updateGoalRow(el, g) { $(".gh small", el).innerHTML = goalMeta(g); const i = $(".gbar i", el); i.style.width = goalPct(g) * 100 + "%"; i.classList.toggle("done", !!g.done); $(".gt", el).classList.toggle("muted", !!g.done); const bd = $("[data-act=gdone]", el); if (bd) bd.textContent = g.done ? "Reopen" : "Mark done"; }
 const goalsView = () => {
@@ -734,7 +808,8 @@ V.dash = () => {
   const h = new Date().getHours(), greet = h < 5 ? "Still up" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
   const tot = ls.reduce((a, l) => a + l.items.length, 0), done = ls.reduce((a, l) => a + l.items.filter(i => i.done).length, 0);
   const tod = occurrences(today(), today()), up = occurrences(addDays(today(), 1), addDays(today(), 7)).slice(0, 5);
-  const hero = `<div class="hero"><div class="sp" style="min-width:0"><div class="row"><div class="greet">${greet}${name ? ", " + esc(name) : ""} 👋</div><span class="sp"></span><button class="btn ghost icon phone-only" data-go="#settings" style="color:#fff" title="Settings">${I.cog}</button></div><div class="date">${new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</div>
+  const cover = PREF().heroCover && lsGet("bgimg", null);
+  const hero = `<div class="hero${cover ? " cover" : ""}"${cover ? ` style="background-image:url(${cover})"` : ""}>${cover ? '<div class="coverlay"></div>' : ""}<div class="sp" style="min-width:0"><div class="row"><div class="greet">${greet}${name ? ", " + esc(name) : ""} 👋</div><span class="sp"></span><button class="btn ghost icon phone-only" data-go="#settings" style="color:#fff" title="Settings">${I.cog}</button></div><div class="date">${new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</div>
     <div class="stat"><div><b>${tod.length}</b>today</div><div><b>${tot - done}</b>open tasks</div><div><b>${w.length - wd}</b>to buy</div></div></div>${ring(done, tot, phone ? 84 : 76, "lg")}</div>`;
   const todayCard = `<section><div class="sec-h"><h2>Today</h2><span class="n">${fmtDate(today(), { weekday: "long" })}</span><span class="sp"></span><button class="btn ghost" data-go="#cal">Calendar ${I.chev}</button></div><div class="card" style="padding:8px 10px">${tod.length ? tod.map(({ ev, date }) => evRow(ev, date, true)).join("") : `<div class="empty" style="padding:18px">Nothing scheduled today.</div>`}${up.length ? `<div class="agenda"><div class="dh">Next up</div>${up.map(({ ev, date }) => evRow(ev, date, true)).join("")}</div>` : ""}</div></section>`;
   if (!phone) {
@@ -991,7 +1066,13 @@ V.settings = () => {
   <div class="card"><h3>You</h3><label class="field">Name (for the greeting)</label><input class="in" id="pName" value="${esc(p.name || "")}" placeholder="Andrew">
     <label class="field">Accent</label><div class="swatches">${Object.entries(ACCENTS).map(([k, [a]]) => `<div class="sw${(p.accent || "indigo") === k ? " on" : ""}" style="background:${a}" data-accent="${k}" title="${k}"></div>`).join("")}</div>
     <label class="field">Theme</label><div class="seg">${["system", "light", "dark"].map(t => `<button class="${theme === t ? "on" : ""}" data-act="theme" data-v="${t}">${t[0].toUpperCase() + t.slice(1)}</button>`).join("")}</div>
+    <label class="field">App name (sidebar + browser tab)</label><input class="in" id="pApp" value="${esc(p.appName || "")}" placeholder="Hub">
     <div class="row" style="margin-top:12px"><button class="btn primary" data-act="savePref">Save</button></div></div>
+  <div class="card"><h3>Backdrop</h3><p class="small muted" style="margin:2px 0 10px">Drawn scenes follow your accent color and theme. Or use a photo of your own (kept on this device, resized to fit).</p>
+    <div class="bdgrid">${Object.entries(BACKDROPS).map(([k, v]) => `<div class="bd${(p.backdrop || "dots") === k ? " on" : ""}" data-bd="${k}"><span>${v.name}</span></div>`).join("")}<div class="bd${p.backdrop === "photo" ? " on" : ""}" data-bd="photo"><span>${lsGet("bgimg", null) ? "Your photo" : "Upload photo…"}</span></div></div>
+    <div id="photoOpts" style="display:${p.backdrop === "photo" ? "block" : "none"}"><label class="field">Photo intensity</label><input type="range" id="bgInt" min="10" max="100" value="${p.bgIntensity ?? 60}">
+      <div class="row wrap" style="margin-top:8px"><label class="row small"><input type="checkbox" id="bgBlur" ${p.bgBlur ? "checked" : ""}> Blur it</label><label class="row small"><input type="checkbox" id="heroCover" ${p.heroCover ? "checked" : ""}> Also use it on the greeting card</label><span class="sp"></span><button class="btn ghost" data-act="photoPick">Change photo</button><button class="btn ghost danger" data-act="photoRemove">Remove</button></div></div>
+    <label class="row small" style="margin-top:12px"><input type="checkbox" id="sideArt" ${p.sideArt === false ? "" : "checked"}> Ridge drawing in the sidebar</label></div>
   <div class="card"><h3>Sync between devices</h3><p class="small muted" style="margin:2px 0 4px">Your own Supabase project (free). Run <code>supabase/setup.sql</code> once, then enter the values here on each device. <span class="row" style="display:inline-flex;gap:6px"><span class="dot" id="syncDot2"></span><span id="syncStatus">${esc(SYNC.msg)}</span></span></p>
     <label class="field">Project URL</label><input class="in" id="sUrl" value="${esc(c.url || "")}" placeholder="https://xxxx.supabase.co">
     <label class="field">Anon key</label><input class="in" id="sKey" value="${esc(c.key || "")}" placeholder="eyJ…">
@@ -1043,6 +1124,7 @@ function render() {
   if (lastView !== name + "/" + arg) { main.classList.remove("view"); main.offsetHeight; main.classList.add("view"); }
   lastView = name + "/" + arg;
   if (keepAdd != null) { const i = $(".addrow input.in", main); if (i) { i.value = keepAdd; i.focus(); } }
+  if (name === "settings") { const a = (ACCENTS[PREF().accent] || ACCENTS.indigo)[0]; $$("[data-bd]", main).forEach(el => { const k = el.dataset.bd; if (k === "photo") { const img = lsGet("bgimg", null); if (img) el.style.backgroundImage = `url(${img})`; } else { const c = BACKDROPS[k].css(a); Object.assign(el.style, c); if (c.backgroundAttachment) el.style.backgroundAttachment = "scroll"; } }); }
   animateRings(main); requestAnimationFrame(() => $$(".bar i[data-w],.gbar i[data-w]", main).forEach(i => i.style.width = i.dataset.w + "%"));
   if (name === "list") dragInit($("#items"), (from, to) => patch("list:" + arg, l => { const [it] = l.items.splice(from, 1); l.items.splice(to, 0, it); }, { quiet: true }));
   const desk = matchMedia("(min-width:900px)").matches;
@@ -1119,7 +1201,11 @@ document.addEventListener("click", async e => {
   if (act === "notifOn") { if (!window.Notification) return toast("Not supported in this browser"); Notification.requestPermission().then(p => { toast("Notifications " + p); render(); }); return; }
   if (act === "notifTest") { if (Notification?.permission !== "granted") return toast("Enable them first"); try { new Notification("Hub", { body: "Reminders work here." }); } catch { navigator.serviceWorker?.ready.then(r => r.showNotification("Hub", { body: "Reminders work here." })); } return; }
   if (act === "savePb") { put("settings:pricebot", { tax_pct: Number($("#pbTax").value) || 0, recheck_minutes: Math.max(15, Number($("#pbMin").value) || 1440), monthly_budget: Math.max(1, Number($("#pbBudget").value) || 95), max_per_run: Math.max(1, Number($("#pbPerRun").value) || 3), stores: $("#pbStores").value.split("\n").map(s => s.trim()).filter(Boolean) }); toast("Saved"); return; }
-  if (act === "savePref") { lsSet("pref", { ...PREF(), name: $("#pName").value.trim() }); applyTheme(); toast("Saved"); return; }
+  if (act === "savePref") { lsSet("pref", { ...PREF(), name: $("#pName").value.trim(), appName: $("#pApp").value.trim() }); applyTheme(); toast("Saved"); return; }
+  const bd = e.target.closest("[data-bd]");
+  if (bd) { const k = bd.dataset.bd; if (k === "photo" && !lsGet("bgimg", null)) { pickPhoto(); return; } lsSet("pref", { ...PREF(), backdrop: k }); applyTheme(); $$("[data-bd]").forEach(x => x.classList.toggle("on", x === bd)); $("#photoOpts").style.display = k === "photo" ? "block" : "none"; return; }
+  if (act === "photoPick") { pickPhoto(); return; }
+  if (act === "photoRemove") { try { localStorage.removeItem("hub:bgimg"); } catch {} lsSet("pref", { ...PREF(), backdrop: "dots", heroCover: false }); applyTheme(); render(); return; }
   if (act === "saveV6") { lsSet("pref", { ...PREF(), v6secret: $("#v6Secret").value.trim(), v6url: $("#v6Url").value.trim() }); toast("Saved, fetching…"); fetchV6().then(() => { render(); toast(V6.data ? "V6 connected ✓" : "No summary found yet" + (V6.err ? ": " + V6.err : ""), 4000); }); return; }
   if (act === "bakNow") { snapshot("manual"); render(); toast("Backed up"); return; }
   if (act === "bakRestore") { const b = lsGet("bak", [])[+t.dataset.i]; if (!b) return; if (await ask("Restore this backup?", "Replaces the data on this device with the backup and syncs it up. The current data is backed up first.", "Restore")) { snapshot("before restore"); DB.docs = b.docs; Object.keys(DB.docs).forEach(id => DB.pending.add(id)); persist(); schedulePush(); render(); toast("Restored"); } return; }
@@ -1129,6 +1215,13 @@ document.addEventListener("click", async e => {
     g.doneAt = g.done ? Date.now() : null; put(id, g, { quiet: true }); updateGoalRow(el, g); setRing($("#view .topbar .ring"), goals().filter(x => x.done).length, goals().length); const sub = $("#view .topbar .sub"); if (sub) sub.textContent = `${goals().filter(x => !x.done).length} active`; return;
   }
   if (act === "gedit") { const id = t.closest("[data-goal]").dataset.goal; goalForm({ id, ...get(id) }); return; }
+  if (act === "stick" || act === "sdel") {
+    const el = t.closest("[data-goal]"), id = el.dataset.goal, g = get(id), row = t.closest("[data-sub]"), sid = row.dataset.sub; if (!g) return;
+    g.subs = g.subs || [];
+    if (act === "sdel") { g.subs = g.subs.filter(x => x.id !== sid); collapse(row); }
+    else { const x = g.subs.find(y => y.id === sid); x.done = !x.done; row.classList.toggle("done", x.done); t.setAttribute("aria-checked", x.done); if (!g.target && g.subs.length && g.subs.every(y => y.done) && !g.done) { g.done = true; const r = t.getBoundingClientRect(); confetti(r.left + 10, r.top + 10); toast("🎯 Goal reached!"); } }
+    put(id, g, { quiet: true }); updateGoalRow(el, g); return;
+  }
   if (act === "theme") { lsSet("theme", t.dataset.v); applyTheme(); render(); return; }
   if (act === "export") { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify({ version: APP_VERSION, docs: DB.docs }, null, 1)], { type: "application/json" })); a.download = "hub-" + today() + ".json"; a.click(); return; }
   if (act === "import") { const i = document.createElement("input"); i.type = "file"; i.accept = ".json"; i.onchange = async () => { try { const j = JSON.parse(await i.files[0].text()); let n = 0; for (const [id, d] of Object.entries(j.docs || {})) { put(id, d.data, { quiet: true }); n++; } render(); toast("Imported " + n + " records"); } catch (err) { toast("Import failed: " + err.message); } }; i.click(); return; }
@@ -1140,10 +1233,17 @@ document.addEventListener("click", async e => {
   const day = e.target.closest("[data-day]"); if (day) { calDayClick(e, day); return; }
   const go = e.target.closest("[data-go]"); if (go) { location.hash = go.dataset.go; return; }
 });
+function pickPhoto() {
+  const i = document.createElement("input"); i.type = "file"; i.accept = "image/*";
+  i.onchange = async () => { try { const data = await loadPhoto(i.files[0]); if (data.length > 4.5e6) return toast("That photo is too large even after resizing"); lsSet("bgimg", data); lsSet("pref", { ...PREF(), backdrop: "photo" }); applyTheme(); render(); toast("Photo set"); } catch { toast("Could not read that image"); } };
+  i.click();
+}
 $("#view").addEventListener("change", e => {
   const { arg } = route(), t = e.target;
+  if (t.id === "bgInt" || t.id === "bgBlur" || t.id === "heroCover" || t.id === "sideArt") { lsSet("pref", { ...PREF(), bgIntensity: +$("#bgInt").value, bgBlur: $("#bgBlur").checked, heroCover: $("#heroCover").checked, sideArt: $("#sideArt").checked }); applyTheme(); return; }
   if (t.dataset.act === "title") patch("list:" + arg, l => l.title = t.value.trim() || "Untitled", { quiet: true });
 });
+$("#view").addEventListener("input", e => { if (e.target.id === "bgInt") { $("#bgphoto").style.opacity = e.target.value / 100; } });
 $("#view").addEventListener("focusout", e => {
   const t = e.target; if (t.dataset?.act !== "text") return;
   const iid = t.closest("[data-item]").dataset.item, v = t.textContent.trim();
@@ -1157,6 +1257,11 @@ $("#view").addEventListener("submit", e => {
     patch("list:" + route().arg, l => l.items.push(it), { quiet: true });
     $("#emptyItems")?.remove(); $("#items").insertAdjacentHTML("beforeend", itemRow(it)); $("#items").lastElementChild.classList.add("in");
     updateListHeader(get("list:" + route().arg)); inp.value = ""; inp.focus();
+  }
+  if (f.dataset.act === "addSub") {
+    const el = f.closest("[data-goal]"), id = el.dataset.goal, g = get(id); if (!g) return;
+    const x = { id: uid(), text: v, done: false }; g.subs = (g.subs || []).concat([x]); if (!g.target && g.done) g.done = false;
+    put(id, g, { quiet: true }); f.insertAdjacentHTML("beforebegin", `<div class="sub in" data-sub="${x.id}"><button class="chk" role="checkbox" aria-checked="false" data-act="stick">${I.check}</button><span class="st">${esc(x.text)}</span><button class="x" data-act="sdel">${I.x}</button></div>`); inp.value = ""; updateGoalRow(el, g); return;
   }
   if (f.dataset.act === "addGoal") {
     const tgt = $("input[type=number]", f)?.value, id = "goal:" + uid();
@@ -1201,6 +1306,7 @@ function applyTheme() {
   r.setProperty("--accent", a); r.setProperty("--accent-2", a2); r.setProperty("--accent-soft", a + "1f"); r.setProperty("--accent-glow", a + "59");
   const isDark = t === "dark" || (t === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
   const tb = $("#themeBtn"); if (tb) tb.innerHTML = isDark ? I.sun : I.moon;
+  applyBackdrop();
 }
 buildNav(); applyTheme();
 matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", applyTheme);
