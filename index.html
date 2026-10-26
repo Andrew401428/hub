@@ -418,6 +418,18 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .sub .x{opacity:0;border:0;background:none;color:var(--muted);padding:2px;border-radius:6px;cursor:pointer;display:flex}
 .sub:hover .x{opacity:1}@media (hover:none){.sub .x{opacity:.6}}
 .subadd{display:flex;gap:6px;margin-top:4px}.subadd .in{padding:6px 10px;font-size:13px}
+.wk{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+.wkd{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px;min-height:120px;display:flex;flex-direction:column;gap:5px;cursor:pointer;transition:border-color .2s,transform .2s var(--spring)}
+.wkd:hover{border-color:var(--accent);transform:translateY(-2px)}
+.wkd.today{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.wkd .h{display:flex;align-items:baseline;gap:6px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.wkd .h b{font-size:16px;color:var(--text);letter-spacing:0}
+.wkd.today .h b{color:var(--accent)}
+.wkd.past{opacity:.55}
+.wke{--ec:var(--accent);background:color-mix(in srgb,var(--ec) 18%,var(--card));border-left:3px solid var(--ec);border-radius:7px;padding:4px 6px;font-size:11.5px;line-height:1.25;color:color-mix(in srgb,var(--ec) 75%,var(--text));overflow:hidden}
+.wke b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wke span{font-size:10.5px;opacity:.85;white-space:nowrap}
+.wkd .none{font-size:11px;color:var(--muted);margin-top:auto;opacity:.6}
 @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
 </head>
@@ -437,8 +449,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <div id="toasts"></div>
 <script>
 {
-const APP_VERSION = "0.7.1";
+const APP_VERSION = "0.7.2";
 const CHANGELOG = [
+  "0.7.2 Home week is a compact strip: seven days, only the scheduled events as blocks",
   "0.7.1 Home shows the whole current week: the time grid on desktop, a day-by-day agenda on phone",
   "0.7.0 colors: every preset has its own random color (editable), events from a preset inherit it, other new events get a random color with a swatch picker; calendar chips, grid blocks, agenda rows and dots follow the event color",
   "0.6.3 Home block is centered again: greeting, Today and Lists keep their width, Training and Goals sit right beside the middle",
@@ -820,7 +833,7 @@ V.dash = () => {
   const weekHead = `<div class="sec-h"><h2>This week</h2><span class="n">${fmtDate(w0, { month: "short", day: "numeric" })} – ${fmtDate(addDays(w0, 6), { month: "short", day: "numeric" })} · ${wocc.length} event${wocc.length === 1 ? "" : "s"}</span><span class="sp"></span><button class="btn ghost" data-go="#cal">Calendar ${I.chev}</button></div>`;
   const todayCard = phone
     ? `<section>${weekHead}<div class="card agenda" style="padding:6px 12px 12px">${wdays.map(dd => { const xs = wocc.filter(x => x.date === dd); if (!xs.length && dd !== today()) return ""; return `<div class="dh${dd === today() ? " today" : ""}">${dd === today() ? "Today" : fmtDate(dd, { weekday: "long", day: "numeric" })}</div>${xs.map(({ ev, date }) => evRow(ev, date, true)).join("") || `<div class="muted small" style="padding:4px 8px">Nothing today.</div>`}`; }).join("") || `<div class="empty" style="padding:18px">Nothing this week.</div>`}</div></section>`
-    : `<section>${weekHead}${timeGrid(wdays)}</section>`;
+    : `<section>${weekHead}<div class="wk">${wdays.map(dd => { const xs = wocc.filter(x => x.date === dd); return `<div class="wkd${dd === today() ? " today" : ""}${dd < today() ? " past" : ""}" data-day="${dd}"><div class="h">${fmtDate(dd, { weekday: "short" })}<b>${parseYmd(dd).getDate()}</b></div>${xs.map(({ ev }) => `<div class="wke" data-ev="${ev.id}" style="--ec:${evColor(ev)}"><b>${esc(ev.title)}</b><span>${ev.start ? fmtTime(ev.start) + (ev.end ? " – " + fmtTime(ev.end) : "") : "All day"}</span></div>`).join("") || '<div class="none">Free</div>'}</div>`; }).join("")}</div></section>`;
   if (!phone) {
     let o = `<div class="dash-cols"><div class="col">${trainingCard()}</div><div class="mid">${hero}${todayCard}</div><div class="col">${goalsCard(8)}</div></div>`;
     o += `<div class="dash-cols"><div class="col"></div><section class="mid"><div class="sec-h"><h2>Lists</h2><span class="n">${done}/${tot} done</span><span class="sp"></span><button class="btn ghost" data-go="#lists">All lists ${I.chev}</button></div><div class="grid">${ls.map(listCard).join("")}`;
