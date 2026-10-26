@@ -7,4 +7,4 @@ workers_dev = true
 [[d1_databases]]
 binding = "DB"
 database_name = "hub"
-database_id = "REPLACE_WITH_D1_ID"
+database_id = "c0f7e341-9ba5-4d24-960b-ec78b8eafd08"
