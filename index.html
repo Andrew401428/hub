@@ -346,8 +346,8 @@ kbd{font:11px Inter;border:1px solid var(--line2);border-bottom-width:2px;border
 .phone-only{display:none}
 @media (max-width:899px){.phone-only{display:inline-flex}}
 .dash-cols{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:26px}
-@media (min-width:900px){.content.wide{max-width:none}.dash-cols{grid-template-columns:minmax(220px,340px) minmax(0,1fr) minmax(220px,340px);align-items:stretch;gap:24px}.dash-cols .mid{max-width:1080px;width:100%;margin:0 auto}.dash-cols .col{display:flex;flex-direction:column}.dash-cols .col .tcard{flex:1;min-height:0}.dash-cols .mid section:last-child{margin-bottom:0}}
-@media (min-width:1200px){.dash-cols{gap:32px}}
+@media (min-width:900px){.content.wide{max-width:calc(1080px + 2 * 304px)}.dash-cols{grid-template-columns:minmax(220px,280px) minmax(0,1080px) minmax(220px,280px);justify-content:center;align-items:stretch;gap:24px}.dash-cols .mid{min-width:0}.dash-cols .col{display:flex;flex-direction:column}.dash-cols .col .tcard{flex:1;min-height:0}.dash-cols .mid section:last-child{margin-bottom:0}}
+
 .train .blocks{margin-top:10px;display:flex;flex-direction:column;gap:6px}
 .train .blocks div{font-size:12.5px;color:#cbd5e1;display:flex;gap:8px;align-items:center}
 .train .blocks div::before{content:"";width:6px;height:6px;border-radius:50%;background:#34d399;flex:none;opacity:.8}
@@ -442,8 +442,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <div id="toasts"></div>
 <script>
 {
-const APP_VERSION = "0.6.2";
+const APP_VERSION = "0.6.3";
 const CHANGELOG = [
+  "0.6.3 Home block is centered again: greeting, Today and Lists keep their width, Training and Goals sit right beside the middle",
   "0.6.2 Home uses the full window width: Training and Goals sit out by the edges, the middle keeps its width",
   "0.6.1 desktop Home: Training and Goals are full-height side columns from the greeting down to the bottom of Today; the greeting card is back to full size",
   "0.6.0 backdrops: six hand-drawn scenes that follow your accent (mountains, topo, stars, holds, leaves, dots) or your own photo with intensity + blur, optional cover on the greeting card; sidebar ridge illustration; sub-goals (checklist steps under a goal); app name setting",
@@ -821,10 +822,10 @@ V.dash = () => {
   const todayCard = `<section><div class="sec-h"><h2>Today</h2><span class="n">${fmtDate(today(), { weekday: "long" })}</span><span class="sp"></span><button class="btn ghost" data-go="#cal">Calendar ${I.chev}</button></div><div class="card" style="padding:8px 10px">${tod.length ? tod.map(({ ev, date }) => evRow(ev, date, true)).join("") : `<div class="empty" style="padding:18px">Nothing scheduled today.</div>`}${up.length ? `<div class="agenda"><div class="dh">Next up</div>${up.map(({ ev, date }) => evRow(ev, date, true)).join("")}</div>` : ""}</div></section>`;
   if (!phone) {
     let o = `<div class="dash-cols"><div class="col">${trainingCard()}</div><div class="mid">${hero}${todayCard}</div><div class="col">${goalsCard(8)}</div></div>`;
-    o += `<section><div class="sec-h"><h2>Lists</h2><span class="n">${done}/${tot} done</span><span class="sp"></span><button class="btn ghost" data-go="#lists">All lists ${I.chev}</button></div><div class="grid">${ls.map(listCard).join("")}`;
+    o += `<div class="dash-cols"><div class="col"></div><section class="mid"><div class="sec-h"><h2>Lists</h2><span class="n">${done}/${tot} done</span><span class="sp"></span><button class="btn ghost" data-go="#lists">All lists ${I.chev}</button></div><div class="grid">${ls.map(listCard).join("")}`;
     const due = w.filter(i => !i.done && i.by).slice(0, 3);
     o += `<div class="card sq" style="--lc:#f59e0b;--i:${ls.length}" data-go="#wish"><div class="emoji">🛍️</div><h3>Wishlist</h3><div class="mini">${due.map(i => `<div>${esc(i.name)} · ${relDay(i.by)}</div>`).join("") || (w.length ? `<div>${w.length - wd} to buy</div>` : '<span class="chip grey">Empty</span>')}</div><div class="foot"><span><b>${wd}</b>/${w.length}</span>${ring(wd, w.length, 54)}</div></div>`;
-    o += `<div class="card sq add" style="--i:${ls.length + 1}" data-act="newlist">${I.plus}New list</div></div></section>`;
+    o += `<div class="card sq add" style="--i:${ls.length + 1}" data-act="newlist">${I.plus}New list</div></div></section><div class="col"></div></div>`;
     return o;
   }
   const nextDue = w.filter(i => !i.done && i.by)[0], nextEv = up[0];
