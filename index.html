@@ -345,8 +345,12 @@ kbd{font:11px Inter;border:1px solid var(--line2);border-bottom-width:2px;border
 .crumb{margin:-2px 0 4px -10px}
 .phone-only{display:none}
 @media (max-width:899px){.phone-only{display:inline-flex}}
-.toprow{display:grid;grid-template-columns:1fr;gap:14px;margin-bottom:26px}
-@media (min-width:900px){.toprow{grid-template-columns:minmax(230px,1fr) minmax(0,1.5fr) minmax(230px,1fr)}.toprow .hero{margin:0}}
+.dash-cols{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:26px}
+@media (min-width:900px){.dash-cols{grid-template-columns:250px minmax(0,1fr) 250px;align-items:stretch}.dash-cols .col{display:flex;flex-direction:column}.dash-cols .col .tcard{flex:1;min-height:0}.dash-cols .mid section:last-child{margin-bottom:0}}
+@media (min-width:1200px){.dash-cols{grid-template-columns:280px minmax(0,1fr) 280px}}
+.train .blocks{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.train .blocks div{font-size:12.5px;color:#cbd5e1;display:flex;gap:8px;align-items:center}
+.train .blocks div::before{content:"";width:6px;height:6px;border-radius:50%;background:#34d399;flex:none;opacity:.8}
 .tcard{display:flex;flex-direction:column;gap:8px;min-height:160px;position:relative;overflow:hidden;cursor:pointer;transition:transform .25s var(--spring),box-shadow .25s}
 .tcard:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
 .tcard .lbl{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
@@ -438,8 +442,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <div id="toasts"></div>
 <script>
 {
-const APP_VERSION = "0.6.0";
+const APP_VERSION = "0.6.1";
 const CHANGELOG = [
+  "0.6.1 desktop Home: Training and Goals are full-height side columns from the greeting down to the bottom of Today; the greeting card is back to full size",
   "0.6.0 backdrops: six hand-drawn scenes that follow your accent (mountains, topo, stars, holds, leaves, dots) or your own photo with intensity + blur, optional cover on the greeting card; sidebar ridge illustration; sub-goals (checklist steps under a goal); app name setting",
   "0.5.0 Goals section + Goals card top-right on Home; Training card top-left fed by V6 Trainer; presets panel on the right of the calendar; phone gets its own tabs again with a compact Home; Home button on every page; Sora headings + dotted background; Halloween emojis + any emoji; automatic local backups on every update",
   "0.4.0 calendar: month / week / day / year views with a time grid and now-line; shift presets (Open CI, Close CI, Open FD, Close FD) you arm and drop onto days; undo toasts",
@@ -739,7 +744,7 @@ const goalPct = g => { if (g.done) return 1; if (g.target) return Math.min(1, (g
 const fmtNum = n => Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
 const goalMeta = g => { const { t, d } = subStats(g); return `${g.target ? `${fmtNum(g.current)} / ${fmtNum(g.target)}${g.unit ? " " + esc(g.unit) : ""}` : t ? `${d}/${t} steps` : g.done ? "done" : "in progress"}${g.target && t ? ` · ${d}/${t} steps` : ""}${g.due && !g.done ? ` · ${relDay(g.due)}` : ""}`; };
 const goalRow = (g, big) => `<div class="goal${big ? " gbig" : ""}" data-goal="${g.id}" style="--lc:${g.color || COLORS[0]}"><div class="gh"><span>${g.emoji || "🎯"}</span><span class="gt${g.done ? " muted" : ""}">${esc(g.title)}</span><small>${goalMeta(g)}</small></div><div class="gbar"><i class="${g.done ? "done" : ""}" data-w="${goalPct(g) * 100}"></i></div>${big ? `<div class="subs">${(g.subs || []).map(x => `<div class="sub${x.done ? " done" : ""}" data-sub="${x.id}"><button class="chk" role="checkbox" aria-checked="${!!x.done}" data-act="stick">${I.check}</button><span class="st">${esc(x.text)}</span><button class="x" data-act="sdel">${I.x}</button></div>`).join("")}<form class="subadd" data-act="addSub"><input class="in" placeholder="Add a step…" autocomplete="off"><button class="btn ghost" type="submit">${I.plus}</button></form></div><div class="gctl">${g.target ? `<button class="btn" data-act="gdec">−${fmtNum(g.step || 1)}</button><button class="btn primary" data-act="ginc">+${fmtNum(g.step || 1)}</button>` : ""}<button class="btn ghost" data-act="gdone">${g.done ? "Reopen" : "Mark done"}</button><span class="sp"></span><button class="btn ghost icon" data-act="gedit">${I.edit}</button></div>` : ""}</div>`;
-const goalsCard = () => { const gs = goals().filter(g => !g.done).slice(0, 3), n = goals().length; return `<div class="card tcard" data-go="#goals"><div class="lbl">Goals</div>${gs.map(g => goalRow(g)).join("") || `<div class="muted small" style="padding:8px 0">No goals yet. Tap to add one.</div>`}<div class="small muted" style="margin-top:auto">${n ? `${goals().filter(g => g.done).length}/${n} reached · ` : ""}tap to manage</div></div>`; };
+const goalsCard = (max = 3) => { const gs = goals().filter(g => !g.done).slice(0, max), n = goals().length; return `<div class="card tcard" data-go="#goals"><div class="lbl">Goals</div>${gs.map(g => goalRow(g)).join("") || `<div class="muted small" style="padding:8px 0">No goals yet. Tap to add one.</div>`}<div class="small muted" style="margin-top:auto">${n ? `${goals().filter(g => g.done).length}/${n} reached · ` : ""}tap to manage</div></div>`; };
 function updateGoalRow(el, g) { $(".gh small", el).innerHTML = goalMeta(g); const i = $(".gbar i", el); i.style.width = goalPct(g) * 100 + "%"; i.classList.toggle("done", !!g.done); $(".gt", el).classList.toggle("muted", !!g.done); const bd = $("[data-act=gdone]", el); if (bd) bd.textContent = g.done ? "Reopen" : "Mark done"; }
 const goalsView = () => {
   const gs = goals(), done = gs.filter(g => g.done).length;
@@ -788,7 +793,8 @@ function trainingCard() {
   else if (!d || d.date !== today()) body = `<div class="big">—</div><div class="next">${d ? "Last summary " + fmtDate(d.date) : "No summary yet"}. Open V6 once today and it publishes.${V6.err ? " <span class='muted'>(" + esc(V6.err) + ")</span>" : ""}</div>`;
   else if (d.state === "off" || d.state === "skip") body = `<div class="big">Rest</div><div class="next">${d.state === "skip" ? "Skipped today" : "Nothing planned today"}</div>`;
   else { const left = Math.max(0, d.need - d.done); body = `<div class="row"><div><div class="big">${left}</div><div class="next">${left === 1 ? "set" : "sets"} left of ${d.need}</div></div><span class="sp"></span>${ring(d.done, d.need, 64)}</div><div class="next">${d.next ? `Next: <b>${esc(d.next.name)}</b> · set ${d.next.set} of ${d.next.sets}` : "🎉 All sets done"}</div>`; }
-  return `<div class="card tcard train" id="trainCard" data-href="${esc(v6url())}"><div class="lbl">Training · V6</div>${body}<a href="${esc(v6url())}" target="_blank" rel="noopener" class="small">Open V6 Trainer ${I.ext}</a></div>`;
+  const blocks = d && d.date === today() && d.blocks?.length ? `<div class="blocks"><div class="lbl" style="margin-top:6px">Today's blocks</div>${d.blocks.map(b => `<div>${esc(b)}</div>`).join("")}</div>` : "";
+  return `<div class="card tcard train" id="trainCard" data-href="${esc(v6url())}"><div class="lbl">Training · V6</div>${body}${blocks}<a href="${esc(v6url())}" target="_blank" rel="noopener" class="small">Open V6 Trainer ${I.ext}</a></div>`;
 }
 
 /* ---------- views ---------- */
@@ -810,10 +816,10 @@ V.dash = () => {
   const tod = occurrences(today(), today()), up = occurrences(addDays(today(), 1), addDays(today(), 7)).slice(0, 5);
   const cover = PREF().heroCover && lsGet("bgimg", null);
   const hero = `<div class="hero${cover ? " cover" : ""}"${cover ? ` style="background-image:url(${cover})"` : ""}>${cover ? '<div class="coverlay"></div>' : ""}<div class="sp" style="min-width:0"><div class="row"><div class="greet">${greet}${name ? ", " + esc(name) : ""} 👋</div><span class="sp"></span><button class="btn ghost icon phone-only" data-go="#settings" style="color:#fff" title="Settings">${I.cog}</button></div><div class="date">${new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</div>
-    <div class="stat"><div><b>${tod.length}</b>today</div><div><b>${tot - done}</b>open tasks</div><div><b>${w.length - wd}</b>to buy</div></div></div>${ring(done, tot, phone ? 84 : 76, "lg")}</div>`;
+    <div class="stat"><div><b>${tod.length}</b>today</div><div><b>${tot - done}</b>open tasks</div><div><b>${w.length - wd}</b>to buy</div></div></div>${ring(done, tot, 84, "lg")}</div>`;
   const todayCard = `<section><div class="sec-h"><h2>Today</h2><span class="n">${fmtDate(today(), { weekday: "long" })}</span><span class="sp"></span><button class="btn ghost" data-go="#cal">Calendar ${I.chev}</button></div><div class="card" style="padding:8px 10px">${tod.length ? tod.map(({ ev, date }) => evRow(ev, date, true)).join("") : `<div class="empty" style="padding:18px">Nothing scheduled today.</div>`}${up.length ? `<div class="agenda"><div class="dh">Next up</div>${up.map(({ ev, date }) => evRow(ev, date, true)).join("")}</div>` : ""}</div></section>`;
   if (!phone) {
-    let o = `<div class="toprow">${trainingCard()}${hero}${goalsCard()}</div>` + todayCard;
+    let o = `<div class="dash-cols"><div class="col">${trainingCard()}</div><div class="mid">${hero}${todayCard}</div><div class="col">${goalsCard(8)}</div></div>`;
     o += `<section><div class="sec-h"><h2>Lists</h2><span class="n">${done}/${tot} done</span><span class="sp"></span><button class="btn ghost" data-go="#lists">All lists ${I.chev}</button></div><div class="grid">${ls.map(listCard).join("")}`;
     const due = w.filter(i => !i.done && i.by).slice(0, 3);
     o += `<div class="card sq" style="--lc:#f59e0b;--i:${ls.length}" data-go="#wish"><div class="emoji">🛍️</div><h3>Wishlist</h3><div class="mini">${due.map(i => `<div>${esc(i.name)} · ${relDay(i.by)}</div>`).join("") || (w.length ? `<div>${w.length - wd} to buy</div>` : '<span class="chip grey">Empty</span>')}</div><div class="foot"><span><b>${wd}</b>/${w.length}</span>${ring(wd, w.length, 54)}</div></div>`;
