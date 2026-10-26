@@ -230,18 +230,14 @@ section{margin-bottom:26px}
 .cal .day .n{font-weight:600;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:50%;margin-bottom:2px}
 .cal .day.today .n{background:var(--accent);color:#fff;box-shadow:0 0 0 3px var(--accent-soft)}
 .cal .day.wk{background:var(--bg2)}
-.cal .ev{font-size:10.5px;font-weight:500;background:var(--accent-soft);color:var(--accent);border-radius:6px;padding:2px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cal .ev.work{background:var(--warn-soft);color:#b45309}
-:root[data-theme="dark"] .cal .ev.work,:root:not([data-theme="light"]) .cal .ev.work{color:#fbbf24}
-@media (prefers-color-scheme: light){:root:not([data-theme="dark"]) .cal .ev.work{color:#b45309}}
+.cal .ev{--ec:var(--accent);font-size:10.5px;font-weight:500;background:color-mix(in srgb,var(--ec) 18%,transparent);color:color-mix(in srgb,var(--ec) 78%,var(--text));border-radius:6px;padding:2px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cal .dots{display:none;gap:3px;margin-top:auto}
-.cal .dots i{width:5px;height:5px;border-radius:50%;background:var(--accent);display:block}.cal .dots i.work{background:var(--warn)}
+.cal .dots i{--ec:var(--accent);width:5px;height:5px;border-radius:50%;background:var(--ec);display:block}
 @media (max-width:640px){.cal .day{min-height:54px;padding:5px}.cal .ev{display:none}.cal .dots{display:flex}.cal .day .n{width:20px;height:20px;font-size:11px}}
 .agenda .dh{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 6px}
 .agenda .dh.today{color:var(--accent)}
-.evrow{display:flex;gap:12px;padding:10px 8px;border-radius:12px;align-items:flex-start;transition:background .2s;cursor:pointer;border-left:3px solid var(--accent);margin:4px 0;background:var(--bg2)}
-.evrow.work{border-left-color:var(--warn)}
-.evrow:hover{background:var(--accent-soft)}
+.evrow{--ec:var(--accent);display:flex;gap:12px;padding:10px 8px;border-radius:12px;align-items:flex-start;transition:background .2s;cursor:pointer;border-left:3px solid var(--ec);margin:4px 0;background:var(--bg2)}
+.evrow:hover{background:color-mix(in srgb,var(--ec) 12%,var(--bg2))}
 .evrow .when{width:84px;flex:none;font-size:12px;color:var(--muted);padding-top:1px}
 .evrow .when b{display:block;color:var(--text);font-size:14px}
 .evrow .t{font-weight:600}
@@ -286,10 +282,10 @@ kbd{font:11px Inter;border:1px solid var(--line2);border-bottom-width:2px;border
 .seg.views button{padding:6px 10px;font-size:13px}
 @media (max-width:640px){.cal-h{flex-wrap:wrap;gap:4px}.cal-h h2{flex:1;min-width:0;font-size:16px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cal-h .sp{display:none}.seg.views{flex:1 1 calc(100% - 44px);display:flex;margin-top:4px}.seg.views button{flex:1;text-align:center;padding:7px 4px}.cal-h [data-act=ics]{margin-top:4px}}
 .presets{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px}
-.pchip{display:inline-flex;flex-direction:column;align-items:flex-start;gap:0;border:1px solid var(--line2);background:var(--card);border-radius:12px;padding:6px 12px;cursor:pointer;font-weight:600;font-size:13px;line-height:1.2;transition:all .2s var(--ease)}
+.pchip{--pc:var(--accent);display:inline-flex;flex-direction:column;align-items:flex-start;gap:0;border:1px solid var(--line2);border-left:5px solid var(--pc);background:var(--card);border-radius:12px;padding:6px 12px;cursor:pointer;font-weight:600;font-size:13px;line-height:1.2;transition:all .2s var(--ease)}
 .pchip small{font-weight:500;font-size:10.5px;color:var(--muted)}
 .pchip:hover{border-color:var(--accent);transform:translateY(-1px);box-shadow:0 0 0 3px var(--accent-soft)}
-.pchip.on{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-color:transparent;box-shadow:0 8px 20px -8px var(--accent-glow);animation:armed 1.6s ease-in-out infinite}
+.pchip.on{background:var(--pc);color:#fff;border-color:var(--pc);box-shadow:0 8px 20px -8px var(--pc);animation:armed 1.6s ease-in-out infinite}
 .pchip.on small{color:rgba(255,255,255,.85)}
 @keyframes armed{50%{box-shadow:0 0 0 6px var(--accent-soft)}}
 .armed-note{display:flex;align-items:center;gap:10px;background:var(--accent-soft);color:var(--accent);border-radius:12px;padding:8px 12px;margin-bottom:12px;font-size:13px;font-weight:500;animation:itemIn .3s var(--spring)}
@@ -312,12 +308,9 @@ kbd{font:11px Inter;border:1px solid var(--line2);border-bottom-width:2px;border
 .tg-col{flex:1;min-width:0;position:relative;border-left:1px solid var(--line);cursor:pointer}
 .tg-col.today{background:color-mix(in srgb,var(--accent) 4%,transparent)}
 .tg-line{border-top:1px solid var(--line);box-sizing:border-box}
-.tev{position:absolute;right:3px;background:var(--accent-soft);color:var(--accent);border-left:3px solid var(--accent);border-radius:7px;padding:3px 6px;font-size:11.5px;line-height:1.25;overflow:hidden;cursor:pointer;transition:transform .15s var(--spring),box-shadow .2s;animation:itemIn .3s var(--ease)}
+.tev{--ec:var(--accent);position:absolute;right:3px;background:color-mix(in srgb,var(--ec) 20%,var(--card));color:color-mix(in srgb,var(--ec) 78%,var(--text));border-left:3px solid var(--ec);border-radius:7px;padding:3px 6px;font-size:11.5px;line-height:1.25;overflow:hidden;cursor:pointer;transition:transform .15s var(--spring),box-shadow .2s;animation:itemIn .3s var(--ease)}
 .tev b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tev span{font-size:10px;opacity:.8;white-space:nowrap}
-.tev.work{background:var(--warn-soft);color:#b45309;border-left-color:var(--warn)}
-:root[data-theme="dark"] .tev.work,:root:not([data-theme="light"]) .tev.work{color:#fbbf24}
-@media (prefers-color-scheme: light){:root:not([data-theme="dark"]) .tev.work{color:#b45309}}
 .tev:hover{transform:scale(1.02);box-shadow:var(--shadow-lg);z-index:3}
 .tev.ad{position:static;padding:2px 6px}
 .now{position:absolute;left:0;right:0;height:2px;background:var(--bad);z-index:2;pointer-events:none}
@@ -337,6 +330,7 @@ kbd{font:11px Inter;border:1px solid var(--line2);border-bottom-width:2px;border
 .ym-g span.today{background:var(--accent);color:#fff;font-weight:700}
 .ym.cur{border-color:var(--accent)}
 .prow{display:flex;align-items:center;gap:8px;padding:10px 4px;border-bottom:1px solid var(--line)}
+.cdot{width:12px;height:12px;border-radius:50%;flex:none}
 .prow:last-child{border-bottom:0}
 .toast.act{pointer-events:auto;display:flex;align-items:center;gap:12px}
 .toast.act button{border:0;background:var(--accent);color:#fff;border-radius:8px;padding:4px 10px;font-weight:600;cursor:pointer}
@@ -442,8 +436,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <div id="toasts"></div>
 <script>
 {
-const APP_VERSION = "0.6.3";
+const APP_VERSION = "0.7.0";
 const CHANGELOG = [
+  "0.7.0 colors: every preset has its own random color (editable), events from a preset inherit it, other new events get a random color with a swatch picker; calendar chips, grid blocks, agenda rows and dots follow the event color",
   "0.6.3 Home block is centered again: greeting, Today and Lists keep their width, Training and Goals sit right beside the middle",
   "0.6.2 Home uses the full window width: Training and Goals sit out by the edges, the middle keeps its width",
   "0.6.1 desktop Home: Training and Goals are full-height side columns from the greeting down to the bottom of Today; the greeting card is back to full size",
@@ -880,8 +875,14 @@ const DEFAULT_PRESETS = [
   { id: "p3", name: "Open FD", start: "15:45", end: "19:00", loc: "FD", cat: "work", remind: 30 },
   { id: "p4", name: "Close FD", start: "19:00", end: "23:00", loc: "FD", cat: "work", remind: 30 },
 ];
+const randColor = () => COLORS[Math.floor(Math.random() * 9)];
+const evColor = ev => ev.color || (ev.cat === "work" ? "#f59e0b" : "var(--accent)");
+const swatchRow = (cur, name = "color") => `<div class="swatches" data-swatch="${name}">${COLORS.map(c => `<div class="sw${cur === c ? " on" : ""}" style="background:${c}" data-c="${c}"></div>`).join("")}</div><input type="hidden" name="${name}" value="${cur}">`;
 const presets = () => (get("settings:presets") || { items: [] }).items;
-function ensurePresets() { if (!get("settings:presets")) put("settings:presets", { items: DEFAULT_PRESETS }, { quiet: true }); }
+function ensurePresets() {
+  if (!get("settings:presets")) { const pool = COLORS.slice(0, 9).sort(() => Math.random() - .5); put("settings:presets", { items: DEFAULT_PRESETS.map((p, i) => ({ ...p, color: pool[i % pool.length] })) }, { quiet: true }); return; }
+  const ps = presets(); if (ps.some(p => !p.color)) { const pool = COLORS.slice(0, 9).sort(() => Math.random() - .5); put("settings:presets", { items: ps.map((p, i) => p.color ? p : { ...p, color: pool[i % pool.length] }) }, { quiet: true }); }
+}
 const weekStart = d => addDays(d, -parseYmd(d).getDay());
 const minutes = t => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
 function calTitle() {
@@ -900,7 +901,7 @@ function calMove(n) {
 function setView(v, anchor) { CAL.view = v; lsSet("calview", v); if (anchor) CAL.anchor = anchor; CAL.dir = ""; render(); }
 function addPreset(p, date) {
   const id = "event:" + uid();
-  put(id, { title: p.name, date, start: p.start, end: p.end, loc: p.loc || "", note: "", remind: p.remind ?? 30, repeat: "none", until: "", cat: p.cat || "work", created: Date.now() });
+  put(id, { title: p.name, date, start: p.start, end: p.end, loc: p.loc || "", note: "", remind: p.remind ?? 30, repeat: "none", until: "", cat: p.cat || "work", color: p.color || randColor(), created: Date.now() });
   toast(`${p.name} · ${fmtDate(date)}`, 5000, { label: "Undo", fn: () => del(id) });
 }
 function monthView() {
@@ -910,7 +911,7 @@ function monthView() {
   let o = `<div class="cal">${["S", "M", "T", "W", "T", "F", "S"].map(d => `<div class="dow">${d}</div>`).join("")}`;
   for (let i = 0; i < 42; i++) {
     const d = addDays(from, i), dt = parseYmd(d), dim = dt.getMonth() !== a.getMonth(), evs = byDay[d] || [], wk = dt.getDay() === 0 || dt.getDay() === 6;
-    o += `<div class="day${dim ? " dim" : ""}${d === today() ? " today" : ""}${wk ? " wk" : ""}${CAL.armed ? " armed" : ""}" data-day="${d}"><div class="n">${dt.getDate()}</div>${evs.slice(0, 3).map(x => `<div class="ev${x.ev.cat === "work" ? " work" : ""}">${x.ev.start ? fmtTime(x.ev.start).replace(" ", "") + " " : ""}${esc(x.ev.title)}</div>`).join("")}${evs.length > 3 ? `<div class="ev">+${evs.length - 3} more</div>` : ""}<div class="dots">${evs.slice(0, 4).map(x => `<i class="${x.ev.cat === "work" ? "work" : ""}"></i>`).join("")}</div></div>`;
+    o += `<div class="day${dim ? " dim" : ""}${d === today() ? " today" : ""}${wk ? " wk" : ""}${CAL.armed ? " armed" : ""}" data-day="${d}"><div class="n">${dt.getDate()}</div>${evs.slice(0, 3).map(x => `<div class="ev" style="--ec:${evColor(x.ev)}">${x.ev.start ? fmtTime(x.ev.start).replace(" ", "") + " " : ""}${esc(x.ev.title)}</div>`).join("")}${evs.length > 3 ? `<div class="ev">+${evs.length - 3} more</div>` : ""}<div class="dots">${evs.slice(0, 4).map(x => `<i style="--ec:${evColor(x.ev)}"></i>`).join("")}</div></div>`;
   }
   return o + `</div>`;
 }
@@ -919,13 +920,13 @@ function timeGrid(days) {
   const H = HOUR_PX, hours = []; for (let h = START_H; h < END_H; h++) hours.push(h);
   let o = `<div class="tg${days.length === 1 ? " one" : ""}"><div class="tg-head"><div class="tg-gutter"></div>${days.map(d => `<div class="tg-dh${d === today() ? " today" : ""}" data-dayhead="${d}"><span>${fmtDate(d, { weekday: "short" })}</span><b>${parseYmd(d).getDate()}</b></div>`).join("")}</div>`;
   const allday = days.map(d => (by[d] || []).filter(x => !x.ev.start));
-  if (allday.some(a => a.length)) o += `<div class="tg-allday"><div class="tg-gutter">all day</div>${days.map((d, i) => `<div class="tg-adcol" data-day="${d}" data-grid="1">${allday[i].map(x => `<div class="tev ad${x.ev.cat === "work" ? " work" : ""}" data-ev="${x.ev.id}"><b>${esc(x.ev.title)}</b></div>`).join("")}</div>`).join("")}</div>`;
+  if (allday.some(a => a.length)) o += `<div class="tg-allday"><div class="tg-gutter">all day</div>${days.map((d, i) => `<div class="tg-adcol" data-day="${d}" data-grid="1">${allday[i].map(x => `<div class="tev ad" data-ev="${x.ev.id}" style="--ec:${evColor(x.ev)}"><b>${esc(x.ev.title)}</b></div>`).join("")}</div>`).join("")}</div>`;
   o += `<div class="tg-body" style="height:${hours.length * H}px"><div class="tg-gutter">${hours.map(h => `<div class="tg-hour" style="height:${H}px">${h === 12 ? "noon" : (h % 12 || 12) + (h < 12 ? "am" : "pm")}</div>`).join("")}</div>`;
   for (const d of days) {
     o += `<div class="tg-col${d === today() ? " today" : ""}" data-day="${d}" data-grid="1">${hours.map(() => `<div class="tg-line" style="height:${H}px"></div>`).join("")}`;
     (by[d] || []).filter(x => x.ev.start).forEach((x, i) => {
       const st = Math.max(START_H * 60, minutes(x.ev.start)), en = x.ev.end ? Math.min(END_H * 60, Math.max(minutes(x.ev.end), st + 15)) : st + 60, top = (st - START_H * 60) / 60 * H, h = Math.max(20, (en - st) / 60 * H);
-      o += `<div class="tev${x.ev.cat === "work" ? " work" : ""}" data-ev="${x.ev.id}" style="top:${top}px;height:${h}px;left:${2 + i * 5}px"><b>${esc(x.ev.title)}</b><span>${fmtTime(x.ev.start)}${x.ev.end ? " – " + fmtTime(x.ev.end) : ""}</span></div>`;
+      o += `<div class="tev" data-ev="${x.ev.id}" style="--ec:${evColor(x.ev)};top:${top}px;height:${h}px;left:${2 + i * 5}px"><b>${esc(x.ev.title)}</b><span>${fmtTime(x.ev.start)}${x.ev.end ? " – " + fmtTime(x.ev.end) : ""}</span></div>`;
     });
     if (d === today()) { const n = new Date(), top = (n.getHours() * 60 + n.getMinutes() - START_H * 60) / 60 * H; if (top >= 0) o += `<div class="now" style="top:${top}px"></div>`; }
     o += `</div>`;
@@ -945,7 +946,7 @@ function yearView() {
 }
 V.cal = () => {
   const ps = presets(), armed = ps.find(p => p.id === CAL.armed);
-  const pchip = p => `<button class="pchip${CAL.armed === p.id ? " on" : ""}" data-preset="${p.id}">${esc(p.name)}<small>${fmtTime(p.start)} – ${fmtTime(p.end)}</small></button>`;
+  const pchip = p => `<button class="pchip${CAL.armed === p.id ? " on" : ""}" data-preset="${p.id}" style="--pc:${p.color || "var(--accent)"}">${esc(p.name)}<small>${fmtTime(p.start)} – ${fmtTime(p.end)}</small></button>`;
   let o = `<div class="crumb">${homeBtn()}</div><div class="cal-h"><button class="btn ghost icon" data-act="calPrev">${I.back}</button><h2>${calTitle()}</h2><button class="btn ghost icon" data-act="calNext">${I.chev}</button><button class="btn ghost" data-act="calToday">Today</button><span class="sp"></span>
     <div class="seg views">${[["month", "Month"], ["week", "Week"], ["day", "Day"], ["year", "Year"]].map(([v, t]) => `<button class="${CAL.view === v ? "on" : ""}" data-view="${v}">${t}</button>`).join("")}</div>
     <button class="btn ghost icon" data-act="ics" title="Download .ics">${I.down}</button><button class="btn primary" data-act="newEvent" style="display:none" id="newEvDesk">${I.plus}Event</button></div>`;
@@ -976,7 +977,7 @@ function calDayClick(e, el) {
 }
 function presetsSheet() {
   const ps = presets();
-  const b = sheet(`<h3>Shift presets</h3><p class="small muted" style="margin:0 0 8px">Tap one on the calendar, then tap the days you work.</p><div>${ps.map(p => `<div class="prow" data-p="${p.id}"><div class="sp"><b>${esc(p.name)}</b><div class="small muted">${fmtTime(p.start)} – ${fmtTime(p.end)}${p.loc ? " · " + esc(p.loc) : ""} · ${p.cat === "work" ? "work" : "other"} · ${remindLabel(p.remind ?? 30)}</div></div><button class="btn ghost icon" data-act="pedit">${I.edit}</button><button class="btn ghost icon danger" data-act="pdel">${I.x}</button></div>`).join("") || '<div class="muted small">No presets yet.</div>'}</div>
+  const b = sheet(`<h3>Shift presets</h3><p class="small muted" style="margin:0 0 8px">Tap one on the calendar, then tap the days you work.</p><div>${ps.map(p => `<div class="prow" data-p="${p.id}"><span class="cdot" style="background:${p.color || "var(--accent)"}"></span><div class="sp"><b>${esc(p.name)}</b><div class="small muted">${fmtTime(p.start)} – ${fmtTime(p.end)}${p.loc ? " · " + esc(p.loc) : ""} · ${p.cat === "work" ? "work" : "other"} · ${remindLabel(p.remind ?? 30)}</div></div><button class="btn ghost icon" data-act="pedit">${I.edit}</button><button class="btn ghost icon danger" data-act="pdel">${I.x}</button></div>`).join("") || '<div class="muted small">No presets yet.</div>'}</div>
     <div class="row" style="margin-top:14px"><button class="btn" data-act="padd">${I.plus}New preset</button><span class="sp"></span><button class="btn primary" data-act="close">Done</button></div>`);
   b.addEventListener("click", e => {
     const act = e.target.closest("[data-act]")?.dataset.act, pid = e.target.closest("[data-p]")?.dataset.p;
@@ -986,14 +987,16 @@ function presetsSheet() {
   });
 }
 function presetForm(p = {}) {
-  const v = { name: "", start: "15:45", end: "19:00", loc: "", cat: "work", remind: 30, ...p };
+  const v = { name: "", start: "15:45", end: "19:00", loc: "", cat: "work", remind: 30, color: randColor(), ...p };
   const b = sheet(`<h3>${p.id ? "Edit preset" : "New preset"}</h3>
     <label class="field">Name</label><input class="in" name="name" value="${esc(v.name)}" placeholder="Open CI">
     <div class="two"><div><label class="field">Start</label><input class="in" type="time" name="start" value="${v.start}"></div><div><label class="field">End</label><input class="in" type="time" name="end" value="${v.end}"></div></div>
     <div class="two"><div><label class="field">Location</label><input class="in" name="loc" value="${esc(v.loc)}"></div><div><label class="field">Type</label><select name="cat"><option value="work"${v.cat === "work" ? " selected" : ""}>Work</option><option value="other"${v.cat === "other" ? " selected" : ""}>Other</option></select></div></div>
     <label class="field">Remind me</label><select name="remind">${[[-1, "No reminder"], [0, "At start"], [10, "10 min before"], [30, "30 min before"], [60, "1 hour before"], [120, "2 hours before"], [1440, "1 day before"]].map(([m, t]) => `<option value="${m}"${v.remind == m ? " selected" : ""}>${t}</option>`).join("")}</select>
+    <label class="field">Color</label>${swatchRow(v.color)}
     <div class="row" style="margin-top:16px"><span class="sp"></span><button class="btn ghost" data-act="back">Cancel</button><button class="btn primary" data-act="save">Save</button></div>`);
   b.addEventListener("click", e => {
+    const sw = e.target.closest("[data-swatch] .sw"); if (sw) { $$("[data-swatch] .sw", b).forEach(x => x.classList.toggle("on", x === sw)); $("[name=color]", b).value = sw.dataset.c; return; }
     const act = e.target.closest("[data-act]")?.dataset.act;
     if (act === "back") { b.remove(); presetsSheet(); }
     if (act === "save") {
@@ -1003,10 +1006,10 @@ function presetForm(p = {}) {
     }
   });
 }
-const evRow = (ev, date, compact) => `<div class="evrow${ev.cat === "work" ? " work" : ""}" data-ev="${ev.id}"><div class="when"><b>${ev.start ? fmtTime(ev.start) : "All day"}</b>${ev.end ? "to " + fmtTime(ev.end) : compact ? (date === today() ? "today" : fmtDate(date, { weekday: "short" })) : ""}</div>
+const evRow = (ev, date, compact) => `<div class="evrow" data-ev="${ev.id}" style="--ec:${evColor(ev)}"><div class="when"><b>${ev.start ? fmtTime(ev.start) : "All day"}</b>${ev.end ? "to " + fmtTime(ev.end) : compact ? (date === today() ? "today" : fmtDate(date, { weekday: "short" })) : ""}</div>
   <div class="sp" style="min-width:0"><div class="t">${esc(ev.title)}</div><div class="small muted">${[ev.loc, ev.repeat && ev.repeat !== "none" ? "repeats " + ev.repeat : "", ev.remind != null && ev.remind >= 0 ? "🔔 " + remindLabel(ev.remind) : ""].filter(Boolean).map(esc).join(" · ")}</div></div>${ev.cat === "work" ? '<span class="chip work">work</span>' : ""}</div>`;
 function eventForm(ev = {}, date) {
-  const v = { title: "", date: date || today(), start: "09:00", end: "", loc: "", note: "", remind: 30, repeat: "none", until: "", cat: "other", ...ev };
+  const v = { title: "", date: date || today(), start: "09:00", end: "", loc: "", note: "", remind: 30, repeat: "none", until: "", cat: "other", color: randColor(), ...ev };
   const ps = presets();
   const b = sheet(`<h3>${ev.id ? "Edit event" : "New event"}</h3>
     ${ps.length && !ev.id ? `<label class="field">Fill from a preset</label><select name="_preset"><option value="">Choose…</option>${ps.map(p => `<option value="${p.id}">${esc(p.name)} · ${fmtTime(p.start)} – ${fmtTime(p.end)}</option>`).join("")}</select>` : ""}
@@ -1017,11 +1020,13 @@ function eventForm(ev = {}, date) {
     <div class="two"><div><label class="field">Remind me</label><select name="remind">${[[-1, "No reminder"], [0, "At start"], [10, "10 min before"], [30, "30 min before"], [60, "1 hour before"], [120, "2 hours before"], [1440, "1 day before"]].map(([m, t]) => `<option value="${m}"${v.remind == m ? " selected" : ""}>${t}</option>`).join("")}</select></div>
     <div><label class="field">Repeat</label><select name="repeat">${["none", "daily", "weekly", "biweekly", "monthly"].map(r => `<option value="${r}"${v.repeat === r ? " selected" : ""}>${r[0].toUpperCase() + r.slice(1)}</option>`).join("")}</select></div></div>
     <div id="untilWrap" style="display:${v.repeat !== "none" ? "block" : "none"}"><label class="field">Repeat until (optional)</label><input class="in" type="date" name="until" value="${v.until}"></div>
+    <label class="field">Color</label>${swatchRow(v.color)}
     <label class="field">Notes</label><textarea name="note" rows="2">${esc(v.note)}</textarea>
     <div class="row" style="margin-top:16px">${ev.id ? `<button class="btn ghost danger" data-act="delEvent">Delete</button><a class="btn ghost" href="${gcalLink(v)}" target="_blank" rel="noopener">${I.ext} Google Calendar</a>` : ""}<span class="sp"></span><button class="btn ghost" data-act="close">Cancel</button><button class="btn primary" data-act="saveEvent">Save</button></div>`);
   $("[name=repeat]", b).onchange = e => $("#untilWrap", b).style.display = e.target.value === "none" ? "none" : "block";
-  const psel = $("[name=_preset]", b); if (psel) psel.onchange = () => { const p = ps.find(x => x.id === psel.value); if (!p) return; $("[name=title]", b).value = p.name; $("[name=start]", b).value = p.start; $("[name=end]", b).value = p.end; $("[name=loc]", b).value = p.loc || ""; $("[name=remind]", b).value = p.remind ?? 30; $("[name=cat]", b).value = p.cat || "work"; $$("[data-seg] button", b).forEach(x => x.classList.toggle("on", x.dataset.v === (p.cat || "work"))); };
+  const psel = $("[name=_preset]", b); if (psel) psel.onchange = () => { const p = ps.find(x => x.id === psel.value); if (!p) return; $("[name=title]", b).value = p.name; $("[name=start]", b).value = p.start; $("[name=end]", b).value = p.end; $("[name=loc]", b).value = p.loc || ""; $("[name=remind]", b).value = p.remind ?? 30; $("[name=cat]", b).value = p.cat || "work"; $$("[data-seg] button", b).forEach(x => x.classList.toggle("on", x.dataset.v === (p.cat || "work"))); if (p.color) { $("[name=color]", b).value = p.color; $$("[data-swatch] .sw", b).forEach(x => x.classList.toggle("on", x.dataset.c === p.color)); } };
   b.addEventListener("click", async e => {
+    const sw = e.target.closest("[data-swatch] .sw"); if (sw) { const wrap = sw.closest("[data-swatch]"); $$(".sw", wrap).forEach(x => x.classList.toggle("on", x === sw)); $(`[name=${wrap.dataset.swatch}]`, b).value = sw.dataset.c; return; }
     const seg = e.target.closest("[data-seg] button"); if (seg) { $$("button", seg.parentNode).forEach(x => x.classList.toggle("on", x === seg)); $("[name=cat]", b).value = seg.dataset.v; return; }
     const act = e.target.closest("[data-act]")?.dataset.act; if (!act) return;
     if (act === "delEvent") { if (await ask("Delete event?", v.title)) { del(ev.id); b.close(); toast("Event deleted"); } }
