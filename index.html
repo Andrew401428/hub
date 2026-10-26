@@ -346,8 +346,8 @@ kbd{font:11px Inter;border:1px solid var(--line2);border-bottom-width:2px;border
 .phone-only{display:none}
 @media (max-width:899px){.phone-only{display:inline-flex}}
 .dash-cols{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:26px}
-@media (min-width:900px){.dash-cols{grid-template-columns:250px minmax(0,1fr) 250px;align-items:stretch}.dash-cols .col{display:flex;flex-direction:column}.dash-cols .col .tcard{flex:1;min-height:0}.dash-cols .mid section:last-child{margin-bottom:0}}
-@media (min-width:1200px){.dash-cols{grid-template-columns:280px minmax(0,1fr) 280px}}
+@media (min-width:900px){.content.wide{max-width:none}.dash-cols{grid-template-columns:minmax(220px,340px) minmax(0,1fr) minmax(220px,340px);align-items:stretch;gap:24px}.dash-cols .mid{max-width:1080px;width:100%;margin:0 auto}.dash-cols .col{display:flex;flex-direction:column}.dash-cols .col .tcard{flex:1;min-height:0}.dash-cols .mid section:last-child{margin-bottom:0}}
+@media (min-width:1200px){.dash-cols{gap:32px}}
 .train .blocks{margin-top:10px;display:flex;flex-direction:column;gap:6px}
 .train .blocks div{font-size:12.5px;color:#cbd5e1;display:flex;gap:8px;align-items:center}
 .train .blocks div::before{content:"";width:6px;height:6px;border-radius:50%;background:#34d399;flex:none;opacity:.8}
@@ -442,8 +442,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <div id="toasts"></div>
 <script>
 {
-const APP_VERSION = "0.6.1";
+const APP_VERSION = "0.6.2";
 const CHANGELOG = [
+  "0.6.2 Home uses the full window width: Training and Goals sit out by the edges, the middle keeps its width",
   "0.6.1 desktop Home: Training and Goals are full-height side columns from the greeting down to the bottom of Today; the greeting card is back to full size",
   "0.6.0 backdrops: six hand-drawn scenes that follow your accent (mountains, topo, stars, holds, leaves, dots) or your own photo with intensity + blur, optional cover on the greeting card; sidebar ridge illustration; sub-goals (checklist steps under a goal); app name setting",
   "0.5.0 Goals section + Goals card top-right on Home; Training card top-left fed by V6 Trainer; presets panel on the right of the calendar; phone gets its own tabs again with a compact Home; Home button on every page; Sora headings + dotted background; Halloween emojis + any emoji; automatic local backups on every update",
@@ -1124,7 +1125,7 @@ let lastView = null;
 function render() {
   const { name, arg } = route(), tab = name === "list" ? "lists" : name;
   $$("#sideNav a,#tabbar a").forEach(a => a.classList.toggle("on", a.dataset.t === tab));
-  const main = $("#view");
+  const main = $("#view"); $(".content").classList.toggle("wide", name === "dash");
   const addIn = $(".addrow input.in", main), keepAdd = addIn && document.activeElement === addIn ? addIn.value : null;
   main.innerHTML = V[name](arg);
   if (lastView !== name + "/" + arg) { main.classList.remove("view"); main.offsetHeight; main.classList.add("view"); }
