@@ -1,0 +1,10 @@
+name = "hub-sync"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+# Filled in by `wrangler d1 create hub` (the setup script does this).
+[[d1_databases]]
+binding = "DB"
+database_name = "hub"
+database_id = "REPLACE_WITH_D1_ID"

@@ -449,8 +449,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <div id="toasts"></div>
 <script>
 {
-const APP_VERSION = "0.7.2";
+const APP_VERSION = "0.8.0";
 const CHANGELOG = [
+  "0.8.0 sync runs on our own Cloudflare server (free, no download limits); Supabase still works as a fallback; V6 card has its own settings",
   "0.7.2 Home week is a compact strip: seven days, only the scheduled events as blocks",
   "0.7.1 Home shows the whole current week: the time grid on desktop, a day-by-day agenda on phone",
   "0.7.0 colors: every preset has its own random color (editable), events from a preset inherit it, other new events get a random color with a swatch picker; calendar chips, grid blocks, agenda rows and dots follow the event color",
@@ -566,6 +567,14 @@ function setSync(state, msg) {
   $$("#syncDot,#syncDot2").forEach(d => { d.className = "dot " + ({ ok: "ok", bad: "bad", busy: "busy" }[state] || ""); d.title = msg; });
   $$("#syncText,#syncStatus").forEach(s => s.textContent = msg);
 }
+const isSupa = c => /supabase\.co/i.test(c?.url || "");
+const baseUrl = c => (c.url || "").trim().replace(/\/+$/, "");
+async function api(method, q, body) {   // our Cloudflare worker
+  const c = SYNC.cfg;
+  const r = await fetch(baseUrl(c) + "/docs" + (q || ""), { method, headers: { "x-hub-secret": c.secret, "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
+  if (!r.ok) { let t = ""; try { t = (await r.json()).error || ""; } catch {} throw new Error(`${r.status} ${t}`.trim()); }
+  return r.json();
+}
 async function supa(path, opt = {}) {
   const c = SYNC.cfg; if (!c?.url) throw new Error("no sync config");
   const headers = { apikey: c.key, Authorization: "Bearer " + c.key, "x-hub-secret": c.secret, "Content-Type": "application/json", ...(opt.headers || {}) };
@@ -579,7 +588,9 @@ async function push() {
   if (!SYNC.cfg || pushing || !DB.pending.size || !navigator.onLine) return;
   pushing = true; const ids = [...DB.pending];
   try {
-    await supa("hub_docs?on_conflict=id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify(ids.map(id => ({ id, data: DB.docs[id].data }))) });
+    const rows = ids.map(id => ({ id, data: DB.docs[id].data }));
+    if (isSupa(SYNC.cfg)) await supa("hub_docs?on_conflict=id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify(rows) });
+    else for (let i = 0; i < rows.length; i += 400) await api("POST", "", rows.slice(i, i + 400));
     ids.forEach(id => DB.pending.delete(id)); persist();
     if (SYNC.state !== "ok") setSync("ok", "Synced");
   } catch (e) { setSync("bad", "Upload failed: " + e.message); }
@@ -589,8 +600,9 @@ async function pull(full = false) {
   if (!SYNC.cfg || pulling || !navigator.onLine) return null;
   pulling = true; const seen = new Set();
   try {
-    const q = (!full && DB.cursor) ? `&updated_at=gt.${encodeURIComponent(DB.cursor)}` : "";
-    const rows = await (await supa(`hub_docs?select=id,data,updated_at&order=updated_at.asc${q}`)).json();
+    let rows;
+    if (isSupa(SYNC.cfg)) { const q = (!full && DB.cursor) ? `&updated_at=gt.${encodeURIComponent(DB.cursor)}` : ""; rows = await (await supa(`hub_docs?select=id,data,updated_at&order=updated_at.asc${q}`)).json(); }
+    else { const since = !full && DB.cursor ? new Date(Date.parse(DB.cursor) - 2000).toISOString() : ""; rows = await api("GET", since ? "?since=" + encodeURIComponent(since) : ""); }
     let changed = false;
     for (const row of rows) {
       seen.add(row.id);
@@ -790,9 +802,10 @@ function goalForm(g = {}) {
 const V6 = { data: lsGet("v6today", null) };
 const v6url = () => PREF().v6url || "https://papaya-naiad-8d2bee.netlify.app";
 async function fetchV6() {
-  const c = SYNC.cfg, sec = PREF().v6secret; if (!c?.url || !c.key || !sec || !navigator.onLine) return;
+  const p = PREF(), sec = p.v6secret, url = p.v6sbUrl || (isSupa(SYNC.cfg) ? SYNC.cfg.url : ""), key = p.v6sbKey || (isSupa(SYNC.cfg) ? SYNC.cfg.key : "");
+  if (!url || !key || !sec || !navigator.onLine) return;
   try {
-    const r = await fetch(c.url.replace(/\/+$/, "") + "/rest/v1/v6_docs?select=data&id=eq.today", { headers: { apikey: c.key, Authorization: "Bearer " + c.key, "x-v6-secret": sec } });
+    const r = await fetch(url.replace(/\/+$/, "") + "/rest/v1/v6_docs?select=data&id=eq.today", { headers: { apikey: key, ...(/^eyJ/.test(key) ? { Authorization: "Bearer " + key } : {}), "x-v6-secret": sec } });
     if (!r.ok) throw new Error(r.status);
     const rows = await r.json(); const d = rows[0]?.data || null;
     if (JSON.stringify(d) !== JSON.stringify(V6.data)) { V6.data = d; lsSet("v6today", d); const el = $("#trainCard"); if (el) { el.outerHTML = trainingCard(); animateRings($("#trainCard")); } }
@@ -1105,12 +1118,14 @@ V.settings = () => {
     <div id="photoOpts" style="display:${p.backdrop === "photo" ? "block" : "none"}"><label class="field">Photo intensity</label><input type="range" id="bgInt" min="10" max="100" value="${p.bgIntensity ?? 60}">
       <div class="row wrap" style="margin-top:8px"><label class="row small"><input type="checkbox" id="bgBlur" ${p.bgBlur ? "checked" : ""}> Blur it</label><label class="row small"><input type="checkbox" id="heroCover" ${p.heroCover ? "checked" : ""}> Also use it on the greeting card</label><span class="sp"></span><button class="btn ghost" data-act="photoPick">Change photo</button><button class="btn ghost danger" data-act="photoRemove">Remove</button></div></div>
     <label class="row small" style="margin-top:12px"><input type="checkbox" id="sideArt" ${p.sideArt === false ? "" : "checked"}> Ridge drawing in the sidebar</label></div>
-  <div class="card"><h3>Sync between devices</h3><p class="small muted" style="margin:2px 0 4px">Your own Supabase project (free). Run <code>supabase/setup.sql</code> once, then enter the values here on each device. <span class="row" style="display:inline-flex;gap:6px"><span class="dot" id="syncDot2"></span><span id="syncStatus">${esc(SYNC.msg)}</span></span></p>
-    <label class="field">Project URL</label><input class="in" id="sUrl" value="${esc(c.url || "")}" placeholder="https://xxxx.supabase.co">
-    <label class="field">Anon key</label><input class="in" id="sKey" value="${esc(c.key || "")}" placeholder="eyJ…">
-    <label class="field">Secret word (the one in setup.sql)</label><input class="in" id="sSecret" type="password" value="${esc(c.secret || "")}">
+  <div class="card"><h3>Sync between devices</h3><p class="small muted" style="margin:2px 0 4px">Your own sync server on Cloudflare. Enter the same address and secret word on every device. <span class="row" style="display:inline-flex;gap:6px"><span class="dot" id="syncDot2"></span><span id="syncStatus">${esc(SYNC.msg)}</span></span></p>
+    <label class="field">Server address</label><input class="in" id="sUrl" value="${esc(c.url || "")}" placeholder="https://hub-sync.yourname.workers.dev">
+    <label class="field">Secret word</label><input class="in" id="sSecret" type="password" value="${esc(c.secret || "")}">
+    <details style="margin-top:8px"><summary>Using Supabase instead?</summary><label class="field">Anon key (only for a supabase.co address)</label><input class="in" id="sKey" value="${esc(c.key || "")}" placeholder="eyJ…"></details>
     <div class="row" style="margin-top:12px"><button class="btn primary" data-act="connect">${SYNC.cfg ? "Reconnect" : "Connect"}</button>${SYNC.cfg ? '<button class="btn ghost danger" data-act="disconnect">Disconnect</button>' : ""}</div></div>
-  <div class="card"><h3>V6 Trainer</h3><p class="small muted" style="margin:2px 0 4px">Shows today's sets on Home. Uses the same Supabase project as sync above, plus the V6 secret word from the V6 app's own Settings.</p>
+  <div class="card"><h3>V6 Trainer</h3><p class="small muted" style="margin:2px 0 4px">Shows today's sets on Home. Use the same three values as in the V6 app's own Settings.</p>
+    <label class="field">V6 Supabase project URL</label><input class="in" id="v6SbUrl" value="${esc(p.v6sbUrl || "")}" placeholder="https://hezyitvfzawzccnfmtrq.supabase.co">
+    <label class="field">V6 anon key</label><input class="in" id="v6SbKey" value="${esc(p.v6sbKey || "")}" placeholder="eyJ…">
     <label class="field">V6 secret word</label><input class="in" id="v6Secret" type="password" value="${esc(p.v6secret || "")}">
     <label class="field">V6 web app link (opens from the Training card)</label><input class="in" id="v6Url" value="${esc(p.v6url || "")}" placeholder="https://papaya-naiad-8d2bee.netlify.app">
     <div class="row" style="margin-top:12px"><button class="btn primary" data-act="saveV6">Save</button><span class="small muted">${V6.data ? "Last summary: " + fmtDate(V6.data.date) + (V6.data.need != null ? `, ${V6.data.done}/${V6.data.need} sets` : "") : "No summary received yet"}</span></div></div>
@@ -1228,7 +1243,7 @@ document.addEventListener("click", async e => {
   const ymt = e.target.closest("[data-ym]"); if (ymt) { setView("month", ymt.dataset.ym + "-01"); return; }
   if (act === "newEvent") { eventForm({}); return; }
   if (act === "ics") { icsAll(); return; }
-  if (act === "connect") { const cfg = { url: $("#sUrl").value.trim(), key: $("#sKey").value.trim(), secret: $("#sSecret").value.trim() }; if (!cfg.url || !cfg.key || !cfg.secret) return toast("Fill in all three values"); connect(cfg).then(ok => { toast(ok ? "Connected ✓" : "Could not connect: " + SYNC.msg, 5000); render(); }); return; }
+  if (act === "connect") { const cfg = { url: $("#sUrl").value.trim(), key: $("#sKey").value.trim(), secret: $("#sSecret").value.trim() }; cfg.url = cfg.url.replace(/\/+$/, "").replace(/\/docs$/, ""); if (cfg.url && !/^https?:\/\//.test(cfg.url)) cfg.url = "https://" + cfg.url; if (!cfg.url || !cfg.secret || (isSupa(cfg) && !cfg.key)) return toast(isSupa(cfg) ? "Supabase needs the URL, anon key and secret" : "Fill in the server address and secret word"); connect(cfg).then(ok => { toast(ok ? "Connected ✓" : "Could not connect: " + SYNC.msg, 5000); render(); }); return; }
   if (act === "disconnect") { disconnect(); render(); return; }
   if (act === "notifOn") { if (!window.Notification) return toast("Not supported in this browser"); Notification.requestPermission().then(p => { toast("Notifications " + p); render(); }); return; }
   if (act === "notifTest") { if (Notification?.permission !== "granted") return toast("Enable them first"); try { new Notification("Hub", { body: "Reminders work here." }); } catch { navigator.serviceWorker?.ready.then(r => r.showNotification("Hub", { body: "Reminders work here." })); } return; }
@@ -1238,7 +1253,7 @@ document.addEventListener("click", async e => {
   if (bd) { const k = bd.dataset.bd; if (k === "photo" && !lsGet("bgimg", null)) { pickPhoto(); return; } lsSet("pref", { ...PREF(), backdrop: k }); applyTheme(); $$("[data-bd]").forEach(x => x.classList.toggle("on", x === bd)); $("#photoOpts").style.display = k === "photo" ? "block" : "none"; return; }
   if (act === "photoPick") { pickPhoto(); return; }
   if (act === "photoRemove") { try { localStorage.removeItem("hub:bgimg"); } catch {} lsSet("pref", { ...PREF(), backdrop: "dots", heroCover: false }); applyTheme(); render(); return; }
-  if (act === "saveV6") { lsSet("pref", { ...PREF(), v6secret: $("#v6Secret").value.trim(), v6url: $("#v6Url").value.trim() }); toast("Saved, fetching…"); fetchV6().then(() => { render(); toast(V6.data ? "V6 connected ✓" : "No summary found yet" + (V6.err ? ": " + V6.err : ""), 4000); }); return; }
+  if (act === "saveV6") { lsSet("pref", { ...PREF(), v6secret: $("#v6Secret").value.trim(), v6url: $("#v6Url").value.trim(), v6sbUrl: $("#v6SbUrl").value.trim().replace(/\/+$/, ""), v6sbKey: $("#v6SbKey").value.trim() }); toast("Saved, fetching…"); fetchV6().then(() => { render(); toast(V6.data ? "V6 connected ✓" : "No summary found yet" + (V6.err ? ": " + V6.err : ""), 4000); }); return; }
   if (act === "bakNow") { snapshot("manual"); render(); toast("Backed up"); return; }
   if (act === "bakRestore") { const b = lsGet("bak", [])[+t.dataset.i]; if (!b) return; if (await ask("Restore this backup?", "Replaces the data on this device with the backup and syncs it up. The current data is backed up first.", "Restore")) { snapshot("before restore"); DB.docs = b.docs; Object.keys(DB.docs).forEach(id => DB.pending.add(id)); persist(); schedulePush(); render(); toast("Restored"); } return; }
   if (act === "gdone" || act === "ginc" || act === "gdec") {
@@ -1343,7 +1358,7 @@ function applyTheme() {
 buildNav(); applyTheme();
 matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", applyTheme);
 if (!Object.keys(DB.docs).length && !SYNC.cfg) {
-  put("list:" + uid(), { title: "Groceries", emoji: "🛒", color: "#22c55e", items: [{ id: uid(), text: "Eggs", done: false }, { id: uid(), text: "Milk", done: true }, { id: uid(), text: "Coffee", done: false }], created: Date.now(), order: 0 }, { quiet: true });
+  put("list:starter", { title: "Groceries", emoji: "🛒", color: "#22c55e", items: [{ id: uid(), text: "Eggs", done: false }, { id: uid(), text: "Milk", done: true }, { id: uid(), text: "Coffee", done: false }], created: Date.now(), order: 0 }, { quiet: true });
 }
 function snapshot(reason) { const baks = lsGet("bak", []); baks.unshift({ v: reason, at: Date.now(), docs: DB.docs }); lsSet("bak", baks.slice(0, 3)); }
 { const prevV = lsGet("ver", null); if (prevV !== APP_VERSION) { if (Object.keys(DB.docs).length) snapshot("before " + APP_VERSION + (prevV ? " (was " + prevV + ")" : "")); lsSet("ver", APP_VERSION); } }

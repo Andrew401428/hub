@@ -15,7 +15,7 @@ Calendar + checklists + wishlist in one page. Works on phone and desktop, free, 
 
 Nothing private is in the repo: sync keys are typed into Settings on each device and stay in that device's storage.
 
-### 2. Sync (Supabase, free)
+### 2. Sync (own Cloudflare worker, see worker/README.md; Supabase still works as a fallback)
 1. Supabase > SQL editor > paste `supabase/setup.sql`, replace both `CHANGE-ME` with your own secret word, run it.
 2. Project Settings > API: copy the Project URL and the `anon` key.
 3. In Hub > Settings > Sync enter URL, anon key, secret word > Connect. Do this on every device.
@@ -28,7 +28,7 @@ Edits upload within a second and other devices pick them up within 5 s while ope
 
 ### 4. Price bot (optional)
 1. Get a free SerpApi key (serpapi.com, 100 searches/month).
-2. Repo > Settings > Secrets and variables > Actions, add: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `HUB_SECRET`, `SERPAPI_KEY`.
+2. Repo > Settings > Secrets and variables > Actions, add: `HUB_URL` (the worker address), `HUB_SECRET`, `SERPAPI_KEY`.
 3. The `price bot` workflow (`.github/workflows/prices.yml`) wakes every 15 minutes once those secrets exist (GitHub sometimes delays
    scheduled runs, and pauses schedules after 60 days without a push). It can also be run by hand from the Actions tab.
 4. In Hub > Settings > Price bot you set the re-check interval in minutes, searches per run, the monthly search budget

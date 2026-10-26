@@ -6,7 +6,7 @@ the listed shipping, and writes the cheapest offers back as price:<wishId> docs 
 Hub app shows under each wishlist item.
 
 Env vars (GitHub Actions secrets or a local .env):
-  SUPABASE_URL, SUPABASE_ANON_KEY, HUB_SECRET, SERPAPI_KEY
+  HUB_URL (the worker address), HUB_SECRET, SERPAPI_KEY
 Settings come from the app (Settings > Price bot, doc settings:pricebot): recheck_minutes, max_per_run,
 monthly_budget, tax_pct, stores. MAX_SEARCHES env overrides max_per_run. The bot counts searches per
 calendar month in meta:pricebot and stops when the budget is used, so a frequent schedule stays free.
@@ -35,8 +35,7 @@ if os.path.exists(os.path.join(os.path.dirname(__file__), ".env")):
             k, v = line.strip().split("=", 1)
             os.environ.setdefault(k.strip(), v.strip().strip('"'))
 
-SUPA = env("SUPABASE_URL").rstrip("/")
-KEY = env("SUPABASE_ANON_KEY")
+HUB = env("HUB_URL").rstrip("/")
 SECRET = env("HUB_SECRET")
 SERP = env("SERPAPI_KEY")
 MAX_SEARCHES_ENV = os.environ.get("MAX_SEARCHES")
@@ -47,11 +46,10 @@ DEFAULT_STORES = ["Amazon.com", "Walmart", "Target", "Best Buy", "Costco", "Home
                   "Academy Sports", "Backcountry"]
 
 
-def supa(path, method="GET", body=None, prefer=None):
-    headers = {"apikey": KEY, "Authorization": "Bearer " + KEY, "x-hub-secret": SECRET, "Content-Type": "application/json"}
-    if prefer:
-        headers["Prefer"] = prefer
-    req = urllib.request.Request(SUPA + "/rest/v1/" + path, method=method, headers=headers,
+def hub(query="", method="GET", body=None):
+    """Talk to the Hub sync worker (worker/src/index.js)."""
+    headers = {"x-hub-secret": SECRET, "Content-Type": "application/json", "User-Agent": "hub-pricebot"}
+    req = urllib.request.Request(HUB + "/docs" + query, method=method, headers=headers,
                                  data=json.dumps(body).encode() if body is not None else None)
     with urllib.request.urlopen(req, timeout=30) as r:
         t = r.read().decode()
@@ -62,7 +60,7 @@ def upsert(doc_id, data):
     if DRY:
         print("  [dry] would write", doc_id, json.dumps(data)[:200])
         return
-    supa("hub_docs?on_conflict=id", "POST", [{"id": doc_id, "data": data}], prefer="resolution=merge-duplicates,return=minimal")
+    hub("", "POST", [{"id": doc_id, "data": data}])
 
 
 def norm(s):
@@ -133,7 +131,7 @@ def offers_for(item, cfg):
 
 
 def main():
-    rows = supa("hub_docs?select=id,data&or=(id.like.wish:*,id.like.price:*,id.eq.settings:pricebot)")
+    rows = hub("?prefix=wish:") + hub("?prefix=price:") + hub("?id=settings:pricebot")
     docs = {r["id"]: r["data"] for r in rows}
     cfg = docs.get("settings:pricebot") or {}
     if cfg.get("recheck_minutes"):
@@ -143,7 +141,7 @@ def main():
     max_per_run = int(MAX_SEARCHES_ENV or cfg.get("max_per_run") or 3)
     budget = int(cfg.get("monthly_budget") or 95)
     now = datetime.now(timezone.utc)
-    meta = supa("hub_docs?select=data&id=eq.meta:pricebot")
+    meta = hub("?id=meta:pricebot")
     meta = meta[0]["data"] if meta else {}
     month = now.strftime("%Y-%m")
     used = int(meta.get("month_used") or 0) if meta.get("month") == month else 0
