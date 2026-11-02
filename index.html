@@ -417,6 +417,12 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .sub.done .st{color:var(--muted)}.sub.done .st::after{width:100%}
 .sub .x{opacity:0;border:0;background:none;color:var(--muted);padding:2px;border-radius:6px;cursor:pointer;display:flex}
 .sub:hover .x{opacity:1}@media (hover:none){.sub .x{opacity:.6}}
+.sub .grip{padding:2px 0;margin-left:-2px}.sub:hover .grip{opacity:1}
+.sub.dragging{background:var(--card);box-shadow:var(--shadow-lg);z-index:3;transition:none;border-radius:10px;transform:scale(1.02)}
+.sub .st[contenteditable],.gbig .gt[contenteditable]{outline:none;padding:2px 8px;margin-left:-8px;border-radius:8px;cursor:text;user-select:text;-webkit-user-select:text;transition:background .2s,color .3s}
+.sub .st[contenteditable]:hover,.gbig .gt[contenteditable]:hover{background:var(--accent-soft)}
+.sub .st[contenteditable]:focus,.gbig .gt[contenteditable]:focus{background:var(--card);box-shadow:0 0 0 2px var(--accent-soft);white-space:normal;overflow:visible;text-overflow:clip}
+.sub .st[contenteditable]::after{left:8px;width:0}.sub.done .st[contenteditable]::after{width:calc(100% - 16px)}
 .subadd{display:flex;gap:6px;margin-top:4px}.subadd .in{padding:6px 10px;font-size:13px}
 .wk{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
 .wkd{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px;min-height:120px;display:flex;flex-direction:column;gap:5px;cursor:pointer;transition:border-color .2s,transform .2s var(--spring)}
@@ -449,8 +455,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <div id="toasts"></div>
 <script>
 {
-const APP_VERSION = "0.8.0";
+const APP_VERSION = "0.9.0";
 const CHANGELOG = [
+  "0.9.0 goals: drag the dots to reorder steps; tap a goal title or a step to rename it in place (hover shows what is editable)",
   "0.8.0 sync runs on our own Cloudflare server (free, no download limits); Supabase still works as a fallback; V6 card has its own settings",
   "0.7.2 Home week is a compact strip: seven days, only the scheduled events as blocks",
   "0.7.1 Home shows the whole current week: the time grid on desktop, a day-by-day agenda on phone",
@@ -614,7 +621,7 @@ async function pull(full = false) {
     }
     persist(); SYNC.lastPull = new Date();
     setSync("ok", "Synced " + SYNC.lastPull.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
-    if (changed && !document.querySelector(".dragging")) render();
+    if (changed && !document.querySelector(".dragging") && !document.activeElement?.isContentEditable) render();
   } catch (e) { setSync("bad", "Sync failed: " + e.message); }
   pulling = false; return seen;
 }
@@ -767,7 +774,8 @@ const subStats = g => { const t = (g.subs || []).length, d = (g.subs || []).filt
 const goalPct = g => { if (g.done) return 1; if (g.target) return Math.min(1, (g.current || 0) / g.target); const { t, d } = subStats(g); return t ? d / t : 0; };
 const fmtNum = n => Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
 const goalMeta = g => { const { t, d } = subStats(g); return `${g.target ? `${fmtNum(g.current)} / ${fmtNum(g.target)}${g.unit ? " " + esc(g.unit) : ""}` : t ? `${d}/${t} steps` : g.done ? "done" : "in progress"}${g.target && t ? ` · ${d}/${t} steps` : ""}${g.due && !g.done ? ` · ${relDay(g.due)}` : ""}`; };
-const goalRow = (g, big) => `<div class="goal${big ? " gbig" : ""}" data-goal="${g.id}" style="--lc:${g.color || COLORS[0]}"><div class="gh"><span>${g.emoji || "🎯"}</span><span class="gt${g.done ? " muted" : ""}">${esc(g.title)}</span><small>${goalMeta(g)}</small></div><div class="gbar"><i class="${g.done ? "done" : ""}" data-w="${goalPct(g) * 100}"></i></div>${big ? `<div class="subs">${(g.subs || []).map(x => `<div class="sub${x.done ? " done" : ""}" data-sub="${x.id}"><button class="chk" role="checkbox" aria-checked="${!!x.done}" data-act="stick">${I.check}</button><span class="st">${esc(x.text)}</span><button class="x" data-act="sdel">${I.x}</button></div>`).join("")}<form class="subadd" data-act="addSub"><input class="in" placeholder="Add a step…" autocomplete="off"><button class="btn ghost" type="submit">${I.plus}</button></form></div><div class="gctl">${g.target ? `<button class="btn" data-act="gdec">−${fmtNum(g.step || 1)}</button><button class="btn primary" data-act="ginc">+${fmtNum(g.step || 1)}</button>` : ""}<button class="btn ghost" data-act="gdone">${g.done ? "Reopen" : "Mark done"}</button><span class="sp"></span><button class="btn ghost icon" data-act="gedit">${I.edit}</button></div>` : ""}</div>`;
+const subRow = x => `<div class="sub${x.done ? " done" : ""}" data-sub="${x.id}"><span class="grip">${I.grip}</span><button class="chk" role="checkbox" aria-checked="${!!x.done}" data-act="stick">${I.check}</button><span class="st" contenteditable="true" spellcheck="false" data-act="stext" title="Tap to rename">${esc(x.text)}</span><button class="x" data-act="sdel">${I.x}</button></div>`;
+const goalRow = (g, big) => `<div class="goal${big ? " gbig" : ""}" data-goal="${g.id}" style="--lc:${g.color || COLORS[0]}"><div class="gh"><span>${g.emoji || "🎯"}</span><span class="gt${g.done ? " muted" : ""}"${big ? ' contenteditable="true" spellcheck="false" data-act="gtitle" title="Tap to rename"' : ""}>${esc(g.title)}</span><small>${goalMeta(g)}</small></div><div class="gbar"><i class="${g.done ? "done" : ""}" data-w="${goalPct(g) * 100}"></i></div>${big ? `<div class="subs">${(g.subs || []).map(x => `${subRow(x)}`).join("")}<form class="subadd" data-act="addSub"><input class="in" placeholder="Add a step…" autocomplete="off"><button class="btn ghost" type="submit">${I.plus}</button></form></div><div class="gctl">${g.target ? `<button class="btn" data-act="gdec">−${fmtNum(g.step || 1)}</button><button class="btn primary" data-act="ginc">+${fmtNum(g.step || 1)}</button>` : ""}<button class="btn ghost" data-act="gdone">${g.done ? "Reopen" : "Mark done"}</button><span class="sp"></span><button class="btn ghost icon" data-act="gedit">${I.edit}</button></div>` : ""}</div>`;
 const goalsCard = (max = 3) => { const gs = goals().filter(g => !g.done).slice(0, max), n = goals().length; return `<div class="card tcard" data-go="#goals"><div class="lbl">Goals</div>${gs.map(g => goalRow(g)).join("") || `<div class="muted small" style="padding:8px 0">No goals yet. Tap to add one.</div>`}<div class="small muted" style="margin-top:auto">${n ? `${goals().filter(g => g.done).length}/${n} reached · ` : ""}tap to manage</div></div>`; };
 function updateGoalRow(el, g) { $(".gh small", el).innerHTML = goalMeta(g); const i = $(".gbar i", el); i.style.width = goalPct(g) * 100 + "%"; i.classList.toggle("done", !!g.done); $(".gt", el).classList.toggle("muted", !!g.done); const bd = $("[data-act=gdone]", el); if (bd) bd.textContent = g.done ? "Reopen" : "Mark done"; }
 const goalsView = () => {
@@ -1173,6 +1181,7 @@ function render() {
   if (keepAdd != null) { const i = $(".addrow input.in", main); if (i) { i.value = keepAdd; i.focus(); } }
   if (name === "settings") { const a = (ACCENTS[PREF().accent] || ACCENTS.indigo)[0]; $$("[data-bd]", main).forEach(el => { const k = el.dataset.bd; if (k === "photo") { const img = lsGet("bgimg", null); if (img) el.style.backgroundImage = `url(${img})`; } else { const c = BACKDROPS[k].css(a); Object.assign(el.style, c); if (c.backgroundAttachment) el.style.backgroundAttachment = "scroll"; } }); }
   animateRings(main); requestAnimationFrame(() => $$(".bar i[data-w],.gbar i[data-w]", main).forEach(i => i.style.width = i.dataset.w + "%"));
+  if (name === "goals") $$(".gbig .subs", main).forEach(c => dragInit(c, (from, to) => { const id = c.closest("[data-goal]").dataset.goal, g = get(id); if (!g?.subs) return; const [x] = g.subs.splice(from, 1); g.subs.splice(to, 0, x); put(id, g, { quiet: true }); }, ".sub"));
   if (name === "list") dragInit($("#items"), (from, to) => patch("list:" + arg, l => { const [it] = l.items.splice(from, 1); l.items.splice(to, 0, it); }, { quiet: true }));
   const desk = matchMedia("(min-width:900px)").matches;
   if (name === "cal" && desk) $("#newEvDesk").style.display = "";
@@ -1184,11 +1193,11 @@ let wasPhone = isPhone();
 addEventListener("resize", () => { moveInd(); if (isPhone() !== wasPhone) { wasPhone = isPhone(); render(); } });
 
 /* ---------- drag to reorder ---------- */
-function dragInit(container, onDrop) {
-  if (!container) return;
+function dragInit(container, onDrop, sel = ".item") {
+  if (!container || container.dataset.drag) return; container.dataset.drag = "1";
   container.addEventListener("pointerdown", e => {
     const grip = e.target.closest(".grip"); if (!grip) return;
-    const row = grip.closest(".item"), rows = $$(".item", container), from = rows.indexOf(row), h = row.offsetHeight + 0;
+    const row = grip.closest(sel), rows = $$(sel, container), from = rows.indexOf(row), h = row.offsetHeight + 0;
     e.preventDefault(); row.setPointerCapture(e.pointerId); row.classList.add("dragging");
     const y0 = e.clientY; let to = from;
     const move = ev => {
@@ -1261,6 +1270,7 @@ document.addEventListener("click", async e => {
     if (act === "gdone") g.done = !g.done; else { g.current = Math.max(0, (Number(g.current) || 0) + (act === "ginc" ? 1 : -1) * (Number(g.step) || 1)); if (g.target && g.current >= g.target && !g.done) { g.done = true; const r = t.getBoundingClientRect(); confetti(r.left + 20, r.top + 10); toast("🎯 Goal reached!"); } }
     g.doneAt = g.done ? Date.now() : null; put(id, g, { quiet: true }); updateGoalRow(el, g); setRing($("#view .topbar .ring"), goals().filter(x => x.done).length, goals().length); const sub = $("#view .topbar .sub"); if (sub) sub.textContent = `${goals().filter(x => !x.done).length} active`; return;
   }
+  if (act === "gtitle" || act === "stext") return;
   if (act === "gedit") { const id = t.closest("[data-goal]").dataset.goal; goalForm({ id, ...get(id) }); return; }
   if (act === "stick" || act === "sdel") {
     const el = t.closest("[data-goal]"), id = el.dataset.goal, g = get(id), row = t.closest("[data-sub]"), sid = row.dataset.sub; if (!g) return;
@@ -1292,7 +1302,15 @@ $("#view").addEventListener("change", e => {
 });
 $("#view").addEventListener("input", e => { if (e.target.id === "bgInt") { $("#bgphoto").style.opacity = e.target.value / 100; } });
 $("#view").addEventListener("focusout", e => {
-  const t = e.target; if (t.dataset?.act !== "text") return;
+  const t = e.target, a = t.dataset?.act;
+  if (a === "gtitle" || a === "stext") {
+    const el = t.closest("[data-goal]"), id = el.dataset.goal, g = get(id); if (!g) return;
+    const v = t.textContent.replace(/\s+/g, " ").trim();
+    if (a === "gtitle") { if (v && v !== g.title) { g.title = v; put(id, g, { quiet: true }); } else t.textContent = g.title; }
+    else { const x = (g.subs || []).find(y => y.id === t.closest("[data-sub]").dataset.sub); if (!x) return; if (v && v !== x.text) { x.text = v; put(id, g, { quiet: true }); } else t.textContent = x.text; }
+    return;
+  }
+  if (a !== "text") return;
   const iid = t.closest("[data-item]").dataset.item, v = t.textContent.trim();
   patch("list:" + route().arg, l => { const it = l.items.find(i => i.id === iid); if (it && v) it.text = v; }, { quiet: true });
   if (!v) t.textContent = get("list:" + route().arg)?.items.find(i => i.id === iid)?.text || "";
@@ -1308,7 +1326,7 @@ $("#view").addEventListener("submit", e => {
   if (f.dataset.act === "addSub") {
     const el = f.closest("[data-goal]"), id = el.dataset.goal, g = get(id); if (!g) return;
     const x = { id: uid(), text: v, done: false }; g.subs = (g.subs || []).concat([x]); if (!g.target && g.done) g.done = false;
-    put(id, g, { quiet: true }); f.insertAdjacentHTML("beforebegin", `<div class="sub in" data-sub="${x.id}"><button class="chk" role="checkbox" aria-checked="false" data-act="stick">${I.check}</button><span class="st">${esc(x.text)}</span><button class="x" data-act="sdel">${I.x}</button></div>`); inp.value = ""; updateGoalRow(el, g); return;
+    put(id, g, { quiet: true }); f.insertAdjacentHTML("beforebegin", subRow(x)); f.previousElementSibling.classList.add("in"); inp.value = ""; updateGoalRow(el, g); return;
   }
   if (f.dataset.act === "addGoal") {
     const tgt = $("input[type=number]", f)?.value, id = "goal:" + uid();
@@ -1323,10 +1341,12 @@ $("#view").addEventListener("submit", e => {
 });
 $("#view").addEventListener("keydown", e => {
   if (e.key === "Enter" && e.target.dataset.act === "text") { e.preventDefault(); e.target.blur(); $(".addrow input")?.focus(); }
+  if (e.key === "Enter" && /^(gtitle|stext)$/.test(e.target.dataset.act || "")) { e.preventDefault(); e.target.blur(); }
+  if (e.key === "Escape" && /^(gtitle|stext)$/.test(e.target.dataset.act || "")) { const el = e.target.closest("[data-goal]"), g = get(el.dataset.goal); if (g) e.target.textContent = e.target.dataset.act === "gtitle" ? g.title : (g.subs || []).find(y => y.id === e.target.closest("[data-sub]").dataset.sub)?.text || ""; e.target.blur(); }
   if (e.key === "Enter" && e.target.dataset.act === "title") e.target.blur();
   if (e.key === "Escape" && e.target.dataset.act === "text") e.target.blur();
 });
-$("#view").addEventListener("paste", e => { if (e.target.dataset?.act === "text") { e.preventDefault(); document.execCommand("insertText", false, (e.clipboardData.getData("text/plain") || "").replace(/\n+/g, " ")); } });
+$("#view").addEventListener("paste", e => { if (/^(text|gtitle|stext)$/.test(e.target.dataset?.act || "")) { e.preventDefault(); document.execCommand("insertText", false, (e.clipboardData.getData("text/plain") || "").replace(/\n+/g, " ")); } });
 document.addEventListener("keydown", e => {
   if (e.target.matches("input,textarea,[contenteditable]") || e.metaKey || e.ctrlKey || e.altKey) return;
   const map = { 1: "#dash", 2: "#lists", 3: "#goals", 4: "#wish", 5: "#cal", 6: "#settings" };
