@@ -438,7 +438,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .sub{display:flex;align-items:center;gap:8px;padding:5px 2px;font-size:13.5px;flex-wrap:wrap;row-gap:2px}
 .sub .sb{opacity:0;border:0;background:none;color:var(--muted);padding:2px;border-radius:6px;cursor:pointer;display:flex;transition:opacity .2s,background .2s,color .2s}
 .sub:hover .sb{opacity:1}@media (hover:none){.sub .sb{opacity:.5}}.sub .sb:hover{background:var(--accent-soft);color:var(--text)}.sub .sb svg{width:14px;height:14px}
-.sub .sfill{flex:1;min-width:8px;align-self:stretch}
+.sub .sfill{flex:0 0 4px;align-self:stretch}
 .snote,.inote,.gnote{flex-basis:100%;font-size:12.5px;color:var(--muted);margin-left:48px;white-space:pre-wrap;line-height:1.4;cursor:text;outline:none;border-radius:8px;padding:2px 8px}
 .snote:hover,.inote:hover,.gnote:hover{background:var(--accent-soft)}.snote:focus,.inote:focus,.gnote:focus{background:var(--card);box-shadow:0 0 0 2px var(--accent-soft);color:var(--text)}
 .snote:empty::before,.inote:empty::before,.gnote:empty::before{content:"Add a note…";opacity:.6}
@@ -454,7 +454,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .item:hover .sb{opacity:1}@media (hover:none){.item .sb{opacity:.5}}.item .sb:hover{background:var(--accent-soft);color:var(--text)}.item .sb svg{width:15px;height:15px}
 .evrow .chk{width:22px;height:22px;margin-top:2px}.evrow .chk svg{width:13px;height:13px}
 .sub .chk{width:20px;height:20px}.sub .chk svg{width:12px;height:12px}
-.sub .st{flex:1;min-width:0;position:relative;transition:color .3s}
+.sub .st{flex:1 1 0;min-width:0;overflow-wrap:anywhere;position:relative;transition:color .3s}
 .sub.done .st{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--muted)}
 .sub .x{opacity:0;border:0;background:none;color:var(--muted);padding:2px;border-radius:6px;cursor:pointer;display:flex}
 .sub:hover .x{opacity:1}@media (hover:none){.sub .x{opacity:.6}}
@@ -467,7 +467,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .sq.dragging{z-index:5;box-shadow:var(--shadow-lg);transition:none}.sq.target{outline:2px solid var(--accent);outline-offset:2px}
 .gbig.dragging{background:var(--card);box-shadow:var(--shadow-lg);z-index:3;transition:none;border-radius:14px;transform:scale(1.01)}
 .wish{cursor:grab}.wish .offers{cursor:default}.wish.dragging{background:var(--card);box-shadow:var(--shadow-lg);z-index:3;transition:none;border-radius:12px}
-.wish .name.ren{margin-left:-6px}
+.wish .name.ren{margin-left:-6px}.sub .st.ren:hover::after{right:4px}
 .subadd{display:flex;gap:6px;margin-top:4px}.subadd .in{padding:6px 10px;font-size:13px}
 .wk{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
 .wkd{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px;min-height:120px;display:flex;flex-direction:column;gap:5px;cursor:pointer;transition:border-color .2s,transform .2s var(--spring)}
@@ -500,8 +500,13 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <div id="toasts"></div>
 <script>
 {
-const APP_VERSION = "0.9.0";
+const APP_VERSION = "0.10.0";
 const CHANGELOG = [
+  "0.10.0 push reminders that reach a closed app (worker cron + Web Push, Settings > Reminders); two devices editing the same record now merge field by field instead of the last one winning",
+  "0.9.4 seasonal backdrops (snow, blossom, summer waves, auto by month) and a seasonal greeting; glance screen (clock, today, focus, next steps; press g or the clock icon); hold a Home tile to reorder; Goals/Training columns can swap; price history sparkline per wishlist item; monthly wishlist budget bar",
+  "0.9.3 shift pay: a rate per preset shows hours and earnings on the calendar and in the greeting; Repeat weekly… places a preset on chosen weekdays until a date; week summary under the greeting; Today's focus (pick three things); weekly review (Review button, Sunday prompt)",
+  "0.9.2 nested sub-steps, notes on goals / steps / list items, Undo on every delete and rename, pace to target (per week), daily streaks with a 30-day strip, put a step on the calendar and tick it from there",
+  "0.9.1 grab any part of a row to reorder (steps, goals, items, wishlist, list cards); hover a title anywhere to rename it; wishlist names rename in place",
   "0.9.0 goals: drag the dots to reorder steps; tap a goal title or a step to rename it in place (hover shows what is editable)",
   "0.8.0 sync runs on our own Cloudflare server (free, no download limits); Supabase still works as a fallback; V6 card has its own settings",
   "0.7.2 Home week is a compact strip: seven days, only the scheduled events as blocks",
@@ -603,8 +608,30 @@ function collapse(el, done) {   // animate a row out, then run done()
    Every record is a doc {id, data}. ids: list:<uid>, wish:<uid>, event:<uid>,
    price:<wishId> (written by the price bot), settings:pricebot, meta:pricebot.
    Deleted docs keep a tombstone {deleted:true} so other devices drop them too. */
-const DB = { docs: lsGet("docs", {}), pending: new Set(lsGet("pending", [])), cursor: lsGet("cursor", null) };
-const persist = () => { lsSet("docs", DB.docs); lsSet("pending", [...DB.pending]); lsSet("cursor", DB.cursor); };
+const DB = { docs: lsGet("docs", {}), pending: new Set(lsGet("pending", [])), cursor: lsGet("cursor", null), base: lsGet("base", {}) };
+const persist = () => { lsSet("docs", DB.docs); lsSet("pending", [...DB.pending]); lsSet("cursor", DB.cursor); lsSet("base", DB.base); };
+/* Three-way merge so two devices editing the same record keep both edits.
+   base = what both sides last agreed on (the server copy), local = our pending version, remote = what just arrived. */
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const isObj = v => v && typeof v === "object" && !Array.isArray(v);
+const idArr = a => Array.isArray(a) && a.every(x => isObj(x) && x.id != null);
+function merge3(base, local, remote) {
+  if (same(local, remote)) return local;
+  if (base === undefined) return local;
+  if (same(local, base)) return remote;
+  if (same(remote, base)) return local;
+  if (isObj(base) && isObj(local) && isObj(remote)) {
+    const out = {}; for (const k of new Set([...Object.keys(base), ...Object.keys(local), ...Object.keys(remote)])) { const v = merge3(base[k], local[k], remote[k]); if (v !== undefined) out[k] = v; } return out;
+  }
+  if (idArr(local) && idArr(remote) && (idArr(base) || base == null)) {
+    const B = new Map((base || []).map(x => [x.id, x])), L = new Map(local.map(x => [x.id, x])), R = new Map(remote.map(x => [x.id, x])), out = [];
+    for (const x of local) { const b = B.get(x.id), r = R.get(x.id); if (r) out.push(merge3(b, x, r)); else if (!b || !same(x, b)) out.push(x); }   // missing remotely: remote deleted it, keep only if we changed it
+    for (const r of remote) if (!L.has(r.id)) { const b = B.get(r.id); if (!b || !same(r, b)) out.push(r); }   // added or edited remotely while we deleted it
+    return out;
+  }
+  if (Array.isArray(local) && Array.isArray(remote) && local.every(Array.isArray) && remote.every(Array.isArray)) return unionPts(local, remote);
+  return local;   // both changed a scalar: ours is about to be pushed, keep it
+}
 const get = id => { const d = DB.docs[id]; return d && !d.data.deleted ? d.data : null; };
 const all = prefix => Object.entries(DB.docs).filter(([k, v]) => k.startsWith(prefix) && !v.data.deleted).map(([k, v]) => ({ id: k, ...v.data }));
 function put(id, data, { quiet } = {}) {
@@ -635,7 +662,8 @@ const isSupa = c => /supabase\.co/i.test(c?.url || "");
 const baseUrl = c => (c.url || "").trim().replace(/\/+$/, "");
 async function api(method, q, body) {   // our Cloudflare worker
   const c = SYNC.cfg;
-  const r = await fetch(baseUrl(c) + "/docs" + (q || ""), { method, headers: { "x-hub-secret": c.secret, "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
+  const path = (q || "").startsWith("/../") ? q.slice(3) : "/docs" + (q || "");
+  const r = await fetch(baseUrl(c) + path, { method, headers: { "x-hub-secret": c.secret, "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
   if (!r.ok) { let t = ""; try { t = (await r.json()).error || ""; } catch {} throw new Error(`${r.status} ${t}`.trim()); }
   return r.json();
 }
@@ -655,7 +683,7 @@ async function push() {
     const rows = ids.map(id => ({ id, data: DB.docs[id].data }));
     if (isSupa(SYNC.cfg)) await supa("hub_docs?on_conflict=id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify(rows) });
     else for (let i = 0; i < rows.length; i += 400) await api("POST", "", rows.slice(i, i + 400));
-    ids.forEach(id => DB.pending.delete(id)); persist();
+    ids.forEach(id => { DB.pending.delete(id); DB.base[id] = JSON.parse(JSON.stringify(DB.docs[id].data)); }); persist();
     if (SYNC.state !== "ok") setSync("ok", "Synced");
   } catch (e) { setSync("bad", "Upload failed: " + e.message); }
   pushing = false; if (DB.pending.size) schedulePush();
@@ -671,8 +699,13 @@ async function pull(full = false) {
     for (const row of rows) {
       seen.add(row.id);
       if (row.updated_at > (DB.cursor || "")) DB.cursor = row.updated_at;
-      if (DB.pending.has(row.id)) continue;
       const cur = DB.docs[row.id];
+      if (DB.pending.has(row.id)) {
+        const merged = merge3(DB.base[row.id], cur?.data, row.data); DB.base[row.id] = row.data;
+        if (!same(merged, cur?.data)) { DB.docs[row.id] = { data: merged, at: Date.now() }; changed = true; schedulePush(); }
+        continue;
+      }
+      DB.base[row.id] = row.data;
       if (cur && JSON.stringify(cur.data) === JSON.stringify(row.data)) continue;
       if (row.id.startsWith("pricehist:") && cur?.data?.points) row.data.points = unionPts(cur.data.points, row.data.points);
       DB.docs[row.id] = { data: row.data, at: Date.parse(row.updated_at) }; changed = true;
@@ -769,6 +802,29 @@ function icsAll() {
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([L.join("\r\n")], { type: "text/calendar" })); a.download = "hub.ics"; a.click();
 }
 const fired = new Set(lsGet("fired", []));
+/* ---------- Web Push (reminders while the app is closed) ---------- */
+const pushApi = (path, body) => api("POST", "/../push/" + path, body);
+const b64uToBytes = s => { s = s.replace(/-/g, "+").replace(/_/g, "/"); while (s.length % 4) s += "="; return Uint8Array.from(atob(s), c => c.charCodeAt(0)); };
+async function pushSubscribe() {
+  try {
+    if (!SYNC.cfg || isSupa(SYNC.cfg)) return toast("Connect the Cloudflare sync server first");
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return toast("This browser cannot receive push. On iPhone add Hub to the Home Screen first.", 6000);
+    const perm = await Notification.requestPermission(); if (perm !== "granted") return toast("Notifications are blocked for Hub");
+    const k = await (await fetch(baseUrl(SYNC.cfg) + "/push/key", { headers: { "x-hub-secret": SYNC.cfg.secret } })).json();
+    if (!k.ready || !k.key) return toast("The server has no VAPID keys yet, see README > Reminders", 7000);
+    const reg = await navigator.serviceWorker.ready;
+    const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uToBytes(k.key) });
+    await pushApi("subscribe", { subscription: sub.toJSON(), tz: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC" });
+    lsSet("pushOn", true); toast("Push reminders are on for this device ✓", 4000);
+  } catch (e) { toast("Could not turn on push: " + e.message, 6000); }
+}
+async function pushUnsubscribe() {
+  try { const reg = await navigator.serviceWorker?.ready, sub = await reg?.pushManager.getSubscription(); if (sub) { await pushApi("unsubscribe", { endpoint: sub.endpoint }).catch(() => {}); await sub.unsubscribe(); } } catch {}
+  lsSet("pushOn", false); toast("Push reminders are off on this device");
+}
+// Keep the server copy fresh (browsers rotate subscriptions now and then).
+async function pushRefresh() { try { if (!lsGet("pushOn", false) || !SYNC.cfg || isSupa(SYNC.cfg)) return; const reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription(); if (sub) await pushApi("subscribe", { subscription: sub.toJSON(), tz: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC" }); } catch {} }
+setTimeout(pushRefresh, 8000);
 function checkReminders() {
   const now = new Date(), from = today(), to = addDays(from, 1);
   for (const { ev, date } of occurrences(from, to)) {
@@ -949,7 +1005,7 @@ V.dash = () => {
   const tot = ls.reduce((a, l) => a + l.items.length, 0), done = ls.reduce((a, l) => a + l.items.filter(i => i.done).length, 0);
   const tod = occurrences(today(), today()), up = occurrences(addDays(today(), 1), addDays(today(), 7)).slice(0, 5);
   const cover = PREF().heroCover && lsGet("bgimg", null);
-  const hero = `<div class="hero${cover ? " cover" : ""}"${cover ? ` style="background-image:url(${cover})"` : ""}>${cover ? '<div class="coverlay"></div>' : ""}<div class="sp" style="min-width:0"><div class="row"><div class="greet">${greet}${name ? ", " + esc(name) : ""} ${seasonEmoji()}</div><span class="sp"></span><button class="btn ghost icon phone-only" data-go="#glance" style="color:#fff" title="Glance screen">${I.glance}</button><button class="btn ghost icon phone-only" data-go="#settings" style="color:#fff" title="Settings">${I.cog}</button></div><div class="date">${new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</div>${weekSummary()}
+  const hero = `<div class="hero${cover ? " cover" : ""}"${cover ? ` style="background-image:url(${cover})"` : ""}>${cover ? '<div class="coverlay"></div>' : ""}<div class="sp" style="min-width:0"><div class="row"><div class="greet">${greet}${name ? ", " + esc(name) : ""} ${seasonEmoji()}</div><span class="sp"></span><button class="btn ghost icon phone-only" data-go="#settings" style="color:#fff" title="Settings">${I.cog}</button></div><div class="date">${new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</div>${weekSummary()}
     <div class="stat"><div><b>${tod.length}</b>today</div><div><b>${tot - done}</b>open tasks</div><div><b>${w.length - wd}</b>to buy</div></div></div>${ring(done, tot, 84, "lg")}</div>`;
   const w0 = weekStart(today()), wdays = [...Array(7)].map((_, i) => addDays(w0, i)), wocc = occurrences(w0, addDays(w0, 6));
   const weekHead = `<div class="sec-h"><h2>This week</h2><span class="n">${fmtDate(w0, { month: "short", day: "numeric" })} – ${fmtDate(addDays(w0, 6), { month: "short", day: "numeric" })} · ${wocc.length} event${wocc.length === 1 ? "" : "s"}</span><span class="sp"></span><button class="btn ghost" data-act="review" title="Weekly review">Review</button><button class="btn ghost" data-go="#cal">Calendar ${I.chev}</button></div>`;
@@ -968,13 +1024,14 @@ V.dash = () => {
   const nextDue = w.filter(i => !i.done && i.by)[0], nextEv = up[0];
   return hero + focusCard() + `<section><div class="tiles">${trainingCard()}${goalsCard()}</div></section>` + todayCard + `<section><div class="sec-h"><h2>Sections</h2><span class="n">hold a tile to reorder</span></div><div class="tiles" id="secTiles">${tileOrder().map(k => TILES[k]({ ls, tot, done, w, wd, nextDue, nextEv })).join("")}</div></section>`;
 };
-const TILE_KEYS = ["lists", "wish", "cal", "settings"];
+const TILE_KEYS = ["lists", "wish", "cal", "glance", "settings"];
 const tileOrder = () => { const o = (PREF().tileOrder || []).filter(k => TILE_KEYS.includes(k)); return o.concat(TILE_KEYS.filter(k => !o.includes(k))); };
 const tile = (k, ic, title, sub) => `<div class="card tile" data-go="#${k}" data-tile="${k}"><div class="ti">${ic}</div><div class="tt"><b>${title}</b><span>${sub}</span></div>${I.chev.replace('class="ic"', 'class="ic chev"')}</div>`;
 const TILES = {
   lists: ({ ls, tot, done }) => tile("lists", I.list, "Lists", `${ls.length} lists · ${tot - done} open`),
   wish: ({ w, wd, nextDue }) => tile("wish", I.cart, "Wishlist", `${w.length - wd} to buy${nextDue ? " · " + esc(nextDue.name) + " " + relDay(nextDue.by) : ""}`),
   cal: ({ nextEv }) => tile("cal", I.cal, "Calendar", nextEv ? esc(nextEv.ev.title) + " · " + fmtDate(nextEv.date, { weekday: "short" }) + " " + fmtTime(nextEv.ev.start) : "nothing in the next week"),
+  glance: () => tile("glance", I.glance, "Glance", "big clock, today, focus and next steps"),
   settings: () => tile("settings", I.cog, "Settings", SYNC.cfg ? SYNC.msg : "not synced"),
 };
 V.lists = () => `${topbar("Lists", `${lists().length} lists`)}<div class="grid">${lists().map(listCard).join("")}<div class="card sq add" style="--i:${lists().length}" data-act="newlist">${I.plus}New list</div></div>`;
@@ -1338,7 +1395,9 @@ V.settings = () => {
     <label class="field">V6 web app link (opens from the Training card)</label><input class="in" id="v6Url" value="${esc(p.v6url || "")}" placeholder="https://papaya-naiad-8d2bee.netlify.app">
     <div class="row" style="margin-top:12px"><button class="btn primary" data-act="saveV6">Save</button><span class="small muted">${V6.data ? "Last summary: " + fmtDate(V6.data.date) + (V6.data.need != null ? `, ${V6.data.done}/${V6.data.need} sets` : "") : "No summary received yet"}</span></div></div>
   <div class="card"><h3>Reminders</h3><p class="small muted" style="margin:2px 0 8px">Status: <b>${window.Notification ? Notification.permission : "not supported here"}</b>. On iPhone, notifications only work after adding Hub to the home screen.</p>
-    <div class="row"><button class="btn" data-act="notifOn">${I.bell} Enable notifications</button><button class="btn ghost" data-act="notifTest">Test</button></div></div>
+    <div class="row"><button class="btn" data-act="notifOn">${I.bell} Enable notifications</button><button class="btn ghost" data-act="notifTest">Test</button></div>
+    <p class="small muted" style="margin:14px 0 6px"><b>Push reminders</b> reach this device even when Hub is closed. The sync server sends them every 5 minutes for whatever is due, in this device's time zone (${esc(Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC")}). ${SYNC.cfg && !isSupa(SYNC.cfg) ? "" : "Needs the Cloudflare sync server (connect it above)."}</p>
+    <div class="row wrap"><span class="small" id="pushStatus">${lsGet("pushOn", false) ? "On for this device." : "Off on this device."}</span><span class="sp"></span>${lsGet("pushOn", false) ? `<button class="btn ghost" data-act="pushTest">Send a test push</button><button class="btn ghost danger" data-act="pushOff">Turn off</button>` : `<button class="btn" data-act="pushOn"${SYNC.cfg && !isSupa(SYNC.cfg) ? "" : " disabled"}>${I.bell} Push reminders: turn on</button>`}</div></div>
   <div class="card"><h3>Price bot</h3><p class="small muted" style="margin:2px 0 4px">A script (<code>pricebot/price_check.py</code>) runs on a schedule, reads the wishlist from Supabase and writes the cheapest trusted offers back. These settings are read by the bot.${meta?.ran_at ? " Last run " + new Date(meta.ran_at).toLocaleString() + "." : ""}</p>
     <div class="two"><div><label class="field">Sales tax rate (%)</label><input class="in" id="pbTax" type="number" step="0.01" value="${pb.tax_pct ?? 7.5}"></div><div><label class="field">Re-check each item every (minutes)</label><input class="in" id="pbMin" type="number" min="15" step="15" value="${pb.recheck_minutes ?? (pb.recheck_days ? pb.recheck_days * 1440 : 1440)}"></div></div>
     <div class="two"><div><label class="field">Monthly search budget</label><input class="in" id="pbBudget" type="number" min="1" value="${pb.monthly_budget ?? 95}"></div><div><label class="field">Searches per run</label><input class="in" id="pbPerRun" type="number" min="1" value="${pb.max_per_run ?? 3}"></div></div>
@@ -1487,6 +1546,9 @@ document.addEventListener("click", async e => {
   if (act === "connect") { const cfg = { url: $("#sUrl").value.trim(), key: $("#sKey").value.trim(), secret: $("#sSecret").value.trim() }; cfg.url = cfg.url.replace(/\/+$/, "").replace(/\/docs$/, ""); if (cfg.url && !/^https?:\/\//.test(cfg.url)) cfg.url = "https://" + cfg.url; if (!cfg.url || !cfg.secret || (isSupa(cfg) && !cfg.key)) return toast(isSupa(cfg) ? "Supabase needs the URL, anon key and secret" : "Fill in the server address and secret word"); connect(cfg).then(ok => { toast(ok ? "Connected ✓" : "Could not connect: " + SYNC.msg, 5000); render(); }); return; }
   if (act === "disconnect") { disconnect(); render(); return; }
   if (act === "notifOn") { if (!window.Notification) return toast("Not supported in this browser"); Notification.requestPermission().then(p => { toast("Notifications " + p); render(); }); return; }
+  if (act === "pushOn") { pushSubscribe().then(() => render()); return; }
+  if (act === "pushOff") { pushUnsubscribe().then(() => render()); return; }
+  if (act === "pushTest") { api("POST", "/../push/test").then(r => toast(r.sent ? `Sent to ${r.sent} device${r.sent === 1 ? "" : "s"}` : "Nothing sent: " + (r.error || "no subscribers"), 5000)).catch(e => toast("Test failed: " + e.message, 5000)); return; }
   if (act === "notifTest") { if (Notification?.permission !== "granted") return toast("Enable them first"); try { new Notification("Hub", { body: "Reminders work here." }); } catch { navigator.serviceWorker?.ready.then(r => r.showNotification("Hub", { body: "Reminders work here." })); } return; }
   if (act === "savePb") { put("settings:pricebot", { tax_pct: Number($("#pbTax").value) || 0, recheck_minutes: Math.max(15, Number($("#pbMin").value) || 1440), monthly_budget: Math.max(1, Number($("#pbBudget").value) || 95), max_per_run: Math.max(1, Number($("#pbPerRun").value) || 3), stores: $("#pbStores").value.split("\n").map(s => s.trim()).filter(Boolean) }); toast("Saved"); return; }
   if (act === "savePref") { lsSet("pref", { ...PREF(), name: $("#pName").value.trim(), appName: $("#pApp").value.trim() }); applyTheme(); toast("Saved"); return; }

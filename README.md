@@ -36,10 +36,17 @@ Edits upload within a second and other devices pick them up within 5 s while ope
 
 Run locally instead: put the four values in `pricebot/.env` and `python pricebot/price_check.py` (`--dry` to only print).
 
-## Reminders, honestly
-Browsers cannot fire a scheduled notification while the app is closed. So:
-- While Hub is open (desktop window, or phone app in foreground), it fires a notification + toast at the reminder time.
-- For guaranteed phone alerts press **Google Calendar** on an event (one tap, adds it with the repeat rule) or download the `.ics` once and import it. Google then reminds you everywhere.
+## Reminders
+Three layers, pick what you like:
+- While Hub is open it fires a notification + toast at the reminder time.
+- **Push reminders (closed app too):** the worker sends Web Push every 5 minutes for whatever is due, in each device's own time zone.
+  One-time setup in `worker/`:
+  1. `npx web-push generate-vapid-keys` (prints a public and a private key; `npx` fetches the tool, nothing to install).
+  2. `npx wrangler secret put VAPID_PUBLIC` then `npx wrangler secret put VAPID_PRIVATE`, paste each key when asked.
+  3. `npx wrangler deploy` (the cron trigger is in `wrangler.toml`).
+  4. On each device: Hub > Settings > Reminders > **Enable notifications**, then **Push reminders: turn on** and **Test**.
+     iPhone needs the app added to the Home Screen first (iOS 16.4+).
+- Or press **Google Calendar** on an event / download the `.ics` once and let Google remind you.
 
 ## Updating
 Edit `index.html`, bump `APP_VERSION` and add a `CHANGELOG` line, push. Pages redeploys in about a minute; installed copies pick it up on next open (network-first service worker).

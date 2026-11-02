@@ -8,3 +8,11 @@ workers_dev = true
 binding = "DB"
 database_name = "hub"
 database_id = "c0f7e341-9ba5-4d24-960b-ec78b8eafd08"
+
+# Web Push reminders: runs every 5 minutes and sends the reminders that are due.
+# Needs secrets VAPID_PUBLIC + VAPID_PRIVATE (`npx wrangler secret put ...`), see README.
+[triggers]
+crons = ["*/5 * * * *"]
+
+[vars]
+VAPID_SUBJECT = "https://andrew401428.github.io/hub/"
