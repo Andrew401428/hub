@@ -506,8 +506,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <div id="toasts"></div>
 <script>
 {
-const APP_VERSION = "0.10.2";
+const APP_VERSION = "0.10.3";
 const CHANGELOG = [
+  "0.10.3 dragging fixes: a fast mouse drag no longer drops the row, pressing a step no longer also moves its goal card, holding the mouse still lifts a row like a long-press on the phone",
   "0.10.2 rename only on the text itself (names and notes now hug their words), press and hold any empty part of a row to move it; fold arrows to open and close a goal's steps and a step's sub-steps (remembered per device)",
   "0.10.1 goal steps can have a due date (chip turns orange within 3 days, red when late; the calendar button's menu adds one) and a link that opens in a new tab",
   "0.10.0 push reminders that reach a closed app (worker cron + Web Push, Settings > Reminders); two devices editing the same record now merge field by field instead of the last one winning",
@@ -1469,17 +1470,20 @@ const NO_GRAB = "button,a,input,textarea,select,[contenteditable],.x,.chk,form,t
 function dragInit(container, onDrop, sel = ".item", { grid = false } = {}) {
   if (!container || container.dataset.drag) return; container.dataset.drag = "1";
   container.addEventListener("pointerdown", e => {
+    if (e.dragOwned) return;   // an inner list (a step inside a goal card) already took this press
     const row = e.target.closest(sel); if (!row || !container.contains(row)) return;
+    e.dragOwned = true;
     const rows = $$(sel, container).filter(r => r.parentElement === row.parentElement); if (rows.length < 2) return;
     const grip = e.target.closest(".grip");
     if (!grip && (e.target.closest(NO_GRAB) || (e.pointerType === "mouse" && e.button !== 0))) return;
     const from = rows.indexOf(row), h = row.offsetHeight + (parseFloat(getComputedStyle(row).marginBottom) || 0);
     const y0 = e.clientY, x0 = e.clientX; let to = from, active = false, hold = null, moved = false;
     const start = () => { if (active) return; active = true; clearTimeout(hold); hold = null; row.classList.add("dragging"); try { row.setPointerCapture(e.pointerId); } catch {} };
-    const cleanup = () => { clearTimeout(hold); row.removeEventListener("pointermove", move); row.removeEventListener("pointerup", up); row.removeEventListener("pointercancel", up); };
+    const cleanup = () => { clearTimeout(hold); removeEventListener("pointermove", move); removeEventListener("pointerup", up); removeEventListener("pointercancel", up); };
     const move = ev => {
       const dy = ev.clientY - y0, dx = ev.clientX - x0, dist = Math.hypot(dx, dy);
-      if (!active) { if (hold) { if (dist > 8) cleanup(); return; } if (dist > 6) start(); else return; }
+      if (ev.pointerId !== e.pointerId) return;
+      if (!active) { if (dist <= 6) return; if (e.pointerType !== "mouse") { cleanup(); return; } start(); }   // touch: moving before the hold = scrolling
       moved = true;
       if (grid) { row.style.transform = `translate(${dx}px,${dy}px) scale(1.03)`; const under = document.elementFromPoint(ev.clientX, ev.clientY)?.closest(sel); const i = under ? rows.indexOf(under) : -1; rows.forEach(r => r.classList.toggle("target", r !== row && r === under)); if (i >= 0) to = i; return; }
       row.style.transform = `translateY(${dy}px) scale(1.02)`;
@@ -1493,8 +1497,8 @@ function dragInit(container, onDrop, sel = ".item", { grid = false } = {}) {
       if (to !== from) { if (to > from) rows[to].after(row); else rows[to].before(row); onDrop(from, to, row); }
     };
     if (grip) { e.preventDefault(); start(); }
-    else if (e.pointerType === "touch" || e.pointerType === "pen") hold = setTimeout(start, 280);
-    row.addEventListener("pointermove", move); row.addEventListener("pointerup", up); row.addEventListener("pointercancel", up);
+    else { hold = setTimeout(start, 280); }   // press and hold lifts the row; a mouse can also just start dragging
+    addEventListener("pointermove", move); addEventListener("pointerup", up); addEventListener("pointercancel", up);   // window-level so a fast drag that leaves the row is still followed
   });
 }
 function reorderGoals(container) { $$("[data-goal]", container).forEach((el, i) => { const g = get(el.dataset.goal); if (g && g.order !== i) { g.order = i; put(el.dataset.goal, g, { quiet: true }); } }); }
