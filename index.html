@@ -413,16 +413,19 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .sub{display:flex;align-items:center;gap:8px;padding:5px 2px;font-size:13.5px}
 .sub .chk{width:20px;height:20px}.sub .chk svg{width:12px;height:12px}
 .sub .st{flex:1;min-width:0;position:relative;transition:color .3s}
-.sub .st::after{content:"";position:absolute;left:0;top:50%;height:1.5px;width:0;background:var(--muted);transition:width .35s var(--ease)}
-.sub.done .st{color:var(--muted)}.sub.done .st::after{width:100%}
+.sub.done .st{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--muted)}
 .sub .x{opacity:0;border:0;background:none;color:var(--muted);padding:2px;border-radius:6px;cursor:pointer;display:flex}
 .sub:hover .x{opacity:1}@media (hover:none){.sub .x{opacity:.6}}
 .sub .grip{padding:2px 0;margin-left:-2px}.sub:hover .grip{opacity:1}
 .sub.dragging{background:var(--card);box-shadow:var(--shadow-lg);z-index:3;transition:none;border-radius:10px;transform:scale(1.02)}
-.sub .st[contenteditable],.gbig .gt[contenteditable]{outline:none;padding:2px 8px;margin-left:-8px;border-radius:8px;cursor:text;user-select:text;-webkit-user-select:text;transition:background .2s,color .3s}
-.sub .st[contenteditable]:hover,.gbig .gt[contenteditable]:hover{background:var(--accent-soft)}
-.sub .st[contenteditable]:focus,.gbig .gt[contenteditable]:focus{background:var(--card);box-shadow:0 0 0 2px var(--accent-soft);white-space:normal;overflow:visible;text-overflow:clip}
-.sub .st[contenteditable]::after{left:8px;width:0}.sub.done .st[contenteditable]::after{width:calc(100% - 16px)}
+.ren{cursor:text;border-radius:8px;padding:2px 8px;margin-left:-8px;outline:none;user-select:text;-webkit-user-select:text;transition:background .2s,box-shadow .2s;position:relative}
+.ren:hover{background:var(--accent-soft)}.ren:hover::after{content:"";position:absolute;right:-16px;top:50%;width:12px;height:12px;margin-top:-6px;opacity:.55;background:currentColor;-webkit-mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>') center/contain no-repeat;mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>') center/contain no-repeat}
+.ren:focus{background:var(--card);box-shadow:0 0 0 2px var(--accent-soft);white-space:normal;overflow:visible;text-overflow:clip}.ren:focus::after{display:none}
+.sub,.gbig{user-select:none;-webkit-user-select:none}.sub{cursor:grab}.gbig{cursor:grab}.gbig .subs,.gbig .gctl{cursor:default}.gbig .subs .sub{cursor:grab}
+.sq.dragging{z-index:5;box-shadow:var(--shadow-lg);transition:none}.sq.target{outline:2px solid var(--accent);outline-offset:2px}
+.gbig.dragging{background:var(--card);box-shadow:var(--shadow-lg);z-index:3;transition:none;border-radius:14px;transform:scale(1.01)}
+.wish{cursor:grab}.wish .offers{cursor:default}.wish.dragging{background:var(--card);box-shadow:var(--shadow-lg);z-index:3;transition:none;border-radius:12px}
+.wish .name.ren{margin-left:-6px}
 .subadd{display:flex;gap:6px;margin-top:4px}.subadd .in{padding:6px 10px;font-size:13px}
 .wk{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
 .wkd{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px;min-height:120px;display:flex;flex-direction:column;gap:5px;cursor:pointer;transition:border-color .2s,transform .2s var(--spring)}
@@ -671,7 +674,7 @@ function animateRings(root = document) {
 const lists = () => all("list:").sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.created ?? 0) - (b.created ?? 0));
 const listStats = l => ({ t: l.items.length, d: l.items.filter(i => i.done).length });
 function newList(title) { const id = "list:" + uid(); put(id, { title: title || "New list", items: [], created: Date.now(), order: lists().length, color: COLORS[lists().length % COLORS.length], emoji: EMOJIS[lists().length % EMOJIS.length] }, { quiet: true }); return id; }
-const wishItems = () => all("wish:").sort((a, b) => (a.done - b.done) || ((a.by || "9999") < (b.by || "9999") ? -1 : 1));
+const wishItems = () => all("wish:").sort((a, b) => (a.done - b.done) || ((a.order ?? 1e9) - (b.order ?? 1e9)) || ((a.by || "9999") < (b.by || "9999") ? -1 : (a.by || "9999") > (b.by || "9999") ? 1 : 0));
 const events = () => all("event:");
 function occurrences(from, to) {
   const out = [];
@@ -769,13 +772,14 @@ function loadPhoto(file) {
 }
 
 /* ---------- goals ---------- */
-const goals = () => all("goal:").sort((a, b) => ((a.done ? 1 : 0) - (b.done ? 1 : 0)) || ((a.due || "9999") < (b.due || "9999") ? -1 : 1) || ((a.created || 0) - (b.created || 0)));
+const cmpStr = (a, b) => a < b ? -1 : a > b ? 1 : 0;
+const goals = () => all("goal:").sort((a, b) => ((a.done ? 1 : 0) - (b.done ? 1 : 0)) || ((a.order ?? 1e9) - (b.order ?? 1e9)) || cmpStr(a.due || "9999", b.due || "9999") || ((a.created || 0) - (b.created || 0)));
 const subStats = g => { const t = (g.subs || []).length, d = (g.subs || []).filter(x => x.done).length; return { t, d }; };
 const goalPct = g => { if (g.done) return 1; if (g.target) return Math.min(1, (g.current || 0) / g.target); const { t, d } = subStats(g); return t ? d / t : 0; };
 const fmtNum = n => Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
 const goalMeta = g => { const { t, d } = subStats(g); return `${g.target ? `${fmtNum(g.current)} / ${fmtNum(g.target)}${g.unit ? " " + esc(g.unit) : ""}` : t ? `${d}/${t} steps` : g.done ? "done" : "in progress"}${g.target && t ? ` · ${d}/${t} steps` : ""}${g.due && !g.done ? ` · ${relDay(g.due)}` : ""}`; };
-const subRow = x => `<div class="sub${x.done ? " done" : ""}" data-sub="${x.id}"><span class="grip">${I.grip}</span><button class="chk" role="checkbox" aria-checked="${!!x.done}" data-act="stick">${I.check}</button><span class="st" contenteditable="true" spellcheck="false" data-act="stext" title="Tap to rename">${esc(x.text)}</span><button class="x" data-act="sdel">${I.x}</button></div>`;
-const goalRow = (g, big) => `<div class="goal${big ? " gbig" : ""}" data-goal="${g.id}" style="--lc:${g.color || COLORS[0]}"><div class="gh"><span>${g.emoji || "🎯"}</span><span class="gt${g.done ? " muted" : ""}"${big ? ' contenteditable="true" spellcheck="false" data-act="gtitle" title="Tap to rename"' : ""}>${esc(g.title)}</span><small>${goalMeta(g)}</small></div><div class="gbar"><i class="${g.done ? "done" : ""}" data-w="${goalPct(g) * 100}"></i></div>${big ? `<div class="subs">${(g.subs || []).map(x => `${subRow(x)}`).join("")}<form class="subadd" data-act="addSub"><input class="in" placeholder="Add a step…" autocomplete="off"><button class="btn ghost" type="submit">${I.plus}</button></form></div><div class="gctl">${g.target ? `<button class="btn" data-act="gdec">−${fmtNum(g.step || 1)}</button><button class="btn primary" data-act="ginc">+${fmtNum(g.step || 1)}</button>` : ""}<button class="btn ghost" data-act="gdone">${g.done ? "Reopen" : "Mark done"}</button><span class="sp"></span><button class="btn ghost icon" data-act="gedit">${I.edit}</button></div>` : ""}</div>`;
+const subRow = x => `<div class="sub${x.done ? " done" : ""}" data-sub="${x.id}"><span class="grip">${I.grip}</span><button class="chk" role="checkbox" aria-checked="${!!x.done}" data-act="stick">${I.check}</button><span class="st ren" contenteditable="true" spellcheck="false" data-act="stext" title="Tap to rename">${esc(x.text)}</span><button class="x" data-act="sdel">${I.x}</button></div>`;
+const goalRow = (g, big) => `<div class="goal${big ? " gbig" : ""}" data-goal="${g.id}" style="--lc:${g.color || COLORS[0]}"><div class="gh"><span>${g.emoji || "🎯"}</span><span class="gt${g.done ? " muted" : ""}${big ? " ren" : ""}"${big ? ' contenteditable="true" spellcheck="false" data-act="gtitle" title="Tap to rename"' : ""}>${esc(g.title)}</span><small>${goalMeta(g)}</small></div><div class="gbar"><i class="${g.done ? "done" : ""}" data-w="${goalPct(g) * 100}"></i></div>${big ? `<div class="subs">${(g.subs || []).map(x => `${subRow(x)}`).join("")}<form class="subadd" data-act="addSub"><input class="in" placeholder="Add a step…" autocomplete="off"><button class="btn ghost" type="submit">${I.plus}</button></form></div><div class="gctl">${g.target ? `<button class="btn" data-act="gdec">−${fmtNum(g.step || 1)}</button><button class="btn primary" data-act="ginc">+${fmtNum(g.step || 1)}</button>` : ""}<button class="btn ghost" data-act="gdone">${g.done ? "Reopen" : "Mark done"}</button><span class="sp"></span><button class="btn ghost icon" data-act="gedit">${I.edit}</button></div>` : ""}</div>`;
 const goalsCard = (max = 3) => { const gs = goals().filter(g => !g.done).slice(0, max), n = goals().length; return `<div class="card tcard" data-go="#goals"><div class="lbl">Goals</div>${gs.map(g => goalRow(g)).join("") || `<div class="muted small" style="padding:8px 0">No goals yet. Tap to add one.</div>`}<div class="small muted" style="margin-top:auto">${n ? `${goals().filter(g => g.done).length}/${n} reached · ` : ""}tap to manage</div></div>`; };
 function updateGoalRow(el, g) { $(".gh small", el).innerHTML = goalMeta(g); const i = $(".gbar i", el); i.style.width = goalPct(g) * 100 + "%"; i.classList.toggle("done", !!g.done); $(".gt", el).classList.toggle("muted", !!g.done); const bd = $("[data-act=gdone]", el); if (bd) bd.textContent = g.done ? "Reopen" : "Mark done"; }
 const goalsView = () => {
@@ -871,7 +875,7 @@ V.dash = () => {
     <div class="card tile" data-go="#settings"><div class="ti">${I.cog}</div><div class="tt"><b>Settings</b><span>${SYNC.cfg ? SYNC.msg : "not synced"}</span></div>${I.chev.replace('class="ic"', 'class="ic chev"')}</div></div></section>`;
 };
 V.lists = () => `${topbar("Lists", `${lists().length} lists`)}<div class="grid">${lists().map(listCard).join("")}<div class="card sq add" style="--i:${lists().length}" data-act="newlist">${I.plus}New list</div></div>`;
-const itemRow = it => `<div class="item${it.done ? " done" : ""}" data-item="${it.id}"><span class="grip">${I.grip}</span><button class="chk" role="checkbox" aria-checked="${!!it.done}" data-act="tick">${I.check}</button><div class="txt" contenteditable="true" spellcheck="false" data-act="text">${esc(it.text)}</div><span class="fill"></span><button class="x" data-act="delItem" title="Remove">${I.x}</button></div>`;
+const itemRow = it => `<div class="item${it.done ? " done" : ""}" data-item="${it.id}"><span class="grip">${I.grip}</span><button class="chk" role="checkbox" aria-checked="${!!it.done}" data-act="tick">${I.check}</button><div class="txt ren" contenteditable="true" spellcheck="false" data-act="text">${esc(it.text)}</div><span class="fill"></span><button class="x" data-act="delItem" title="Remove">${I.x}</button></div>`;
 V.list = id => {
   const l = get("list:" + id); if (!l) return `<div class="empty">List not found. <a href="#dash">Back home</a></div>`;
   const { t, d } = listStats(l);
@@ -879,12 +883,12 @@ V.list = id => {
   <div class="card" style="--lc:${l.color || COLORS[0]}"><div class="list-h"><div class="emoji" data-act="editList">${l.emoji || "📝"}</div><div class="sp" style="min-width:0"><input class="title-in" value="${esc(l.title)}" data-act="title" placeholder="List title"><div class="muted small" id="lstats">${d} of ${t} done</div></div>${ring(d, t, 68, "lg")}</div>
   <div class="items" id="items">${l.items.map(itemRow).join("") || `<div class="empty" id="emptyItems">${emptyBox("list", "Nothing here yet. Add your first item below.")}</div>`}</div>
   <form class="addrow" data-act="addItem"><input class="in" placeholder="Add an item…" autocomplete="off" enterkeyhint="done"><button class="btn primary">${I.plus}Add</button></form></div>
-  <p class="small muted" style="margin-top:10px">Tip: tap a row to tick it, tap the word itself to rename, drag the dots to reorder, <kbd>Enter</kbd> adds the next one.</p>`;
+  <p class="small muted" style="margin-top:10px">Tip: tap a row to tick it, tap the word itself to rename, drag a row (or the dots) to reorder, <kbd>Enter</kbd> adds the next one.</p>`;
 };
 function updateListHeader(l) { const { t, d } = listStats(l); setRing($("#view .list-h .ring"), d, t); const s = $("#lstats"); if (s) s.textContent = `${d} of ${t} done`; }
 const wishRow = it => {
   const pr = get("price:" + it.id.slice(5)), best = pr?.offers?.[0], late = it.by && !it.done && daysUntil(it.by) < 0, soon = it.by && !it.done && daysUntil(it.by) >= 0 && daysUntil(it.by) <= 3, open = lsGet("wopen", {})[it.id];
-  let o = `<div class="wish${it.done ? " done" : ""}" data-wish="${it.id}"><div class="head"><button class="chk" role="checkbox" aria-checked="${!!it.done}" data-act="wtick" style="--lc:#f59e0b">${I.check}</button><span class="name" data-act="wopen">${esc(it.name)}</span>
+  let o = `<div class="wish${it.done ? " done" : ""}" data-wish="${it.id}"><div class="head"><button class="chk" role="checkbox" aria-checked="${!!it.done}" data-act="wtick" style="--lc:#f59e0b">${I.check}</button><span class="name ren" contenteditable="true" spellcheck="false" data-act="wname" title="Tap to rename">${esc(it.name)}</span>
     ${best ? `<span class="price${it.budget && best.total > it.budget ? " over" : ""}" data-act="wopen">${money(best.total)}</span>` : ""}<button class="btn ghost icon" data-act="wedit" title="Edit">${I.edit}</button></div>
     <div class="meta">${it.by ? `<span class="chip ${late ? "bad" : soon ? "work" : "grey"}">${late ? "⚠ " : ""}${relDay(it.by)}</span>` : ""}${it.qty > 1 ? `<span>×${it.qty}</span>` : ""}${it.budget ? `<span>budget ${money(it.budget)}</span>` : ""}${best ? `<span>${esc(best.store)}</span>` : ""}${it.note ? `<span>· ${esc(it.note)}</span>` : ""}</div>`;
   if (open) {
@@ -1181,7 +1185,9 @@ function render() {
   if (keepAdd != null) { const i = $(".addrow input.in", main); if (i) { i.value = keepAdd; i.focus(); } }
   if (name === "settings") { const a = (ACCENTS[PREF().accent] || ACCENTS.indigo)[0]; $$("[data-bd]", main).forEach(el => { const k = el.dataset.bd; if (k === "photo") { const img = lsGet("bgimg", null); if (img) el.style.backgroundImage = `url(${img})`; } else { const c = BACKDROPS[k].css(a); Object.assign(el.style, c); if (c.backgroundAttachment) el.style.backgroundAttachment = "scroll"; } }); }
   animateRings(main); requestAnimationFrame(() => $$(".bar i[data-w],.gbar i[data-w]", main).forEach(i => i.style.width = i.dataset.w + "%"));
-  if (name === "goals") $$(".gbig .subs", main).forEach(c => dragInit(c, (from, to) => { const id = c.closest("[data-goal]").dataset.goal, g = get(id); if (!g?.subs) return; const [x] = g.subs.splice(from, 1); g.subs.splice(to, 0, x); put(id, g, { quiet: true }); }, ".sub"));
+  if (name === "goals") { $$(".gbig .subs", main).forEach(c => dragInit(c, (from, to) => { const id = c.closest("[data-goal]").dataset.goal, g = get(id); if (!g?.subs) return; const [x] = g.subs.splice(from, 1); g.subs.splice(to, 0, x); put(id, g, { quiet: true }); }, ".sub")); dragInit($("#goalRows"), () => reorderGoals($("#goalRows")), ".gbig"); }
+  if (name === "wish") dragInit($("#wishes"), () => { $$("[data-wish]", $("#wishes")).forEach((el, i) => { const w = get(el.dataset.wish); if (w && w.order !== i) { w.order = i; put(el.dataset.wish, w, { quiet: true }); } }); }, ".wish");
+  $$(".grid", main).forEach(gr => dragInit(gr, () => { $$(".sq[data-go^='#list/']", gr).forEach((el, i) => { const id = "list:" + el.dataset.go.slice(6), l = get(id); if (l && l.order !== i) { l.order = i; put(id, l, { quiet: true }); } }); }, ".sq[data-go^='#list/']", { grid: true }));
   if (name === "list") dragInit($("#items"), (from, to) => patch("list:" + arg, l => { const [it] = l.items.splice(from, 1); l.items.splice(to, 0, it); }, { quiet: true }));
   const desk = matchMedia("(min-width:900px)").matches;
   if (name === "cal" && desk) $("#newEvDesk").style.display = "";
@@ -1193,31 +1199,47 @@ let wasPhone = isPhone();
 addEventListener("resize", () => { moveInd(); if (isPhone() !== wasPhone) { wasPhone = isPhone(); render(); } });
 
 /* ---------- drag to reorder ---------- */
-function dragInit(container, onDrop, sel = ".item") {
+let suppressClickUntil = 0;
+const NO_GRAB = "button,a,input,textarea,select,[contenteditable],.x,.chk,form,table,.offers";
+function dragInit(container, onDrop, sel = ".item", { grid = false } = {}) {
   if (!container || container.dataset.drag) return; container.dataset.drag = "1";
   container.addEventListener("pointerdown", e => {
-    const grip = e.target.closest(".grip"); if (!grip) return;
-    const row = grip.closest(sel), rows = $$(sel, container), from = rows.indexOf(row), h = row.offsetHeight + 0;
-    e.preventDefault(); row.setPointerCapture(e.pointerId); row.classList.add("dragging");
-    const y0 = e.clientY; let to = from;
+    const row = e.target.closest(sel); if (!row || !container.contains(row)) return;
+    const rows = $$(sel, container).filter(r => r.parentElement === row.parentElement); if (rows.length < 2) return;
+    const grip = e.target.closest(".grip");
+    if (!grip && (e.target.closest(NO_GRAB) || (e.pointerType === "mouse" && e.button !== 0))) return;
+    const from = rows.indexOf(row), h = row.offsetHeight + (parseFloat(getComputedStyle(row).marginBottom) || 0);
+    const y0 = e.clientY, x0 = e.clientX; let to = from, active = false, hold = null, moved = false;
+    const start = () => { if (active) return; active = true; clearTimeout(hold); hold = null; row.classList.add("dragging"); try { row.setPointerCapture(e.pointerId); } catch {} };
+    const cleanup = () => { clearTimeout(hold); row.removeEventListener("pointermove", move); row.removeEventListener("pointerup", up); row.removeEventListener("pointercancel", up); };
     const move = ev => {
-      const dy = ev.clientY - y0; row.style.transform = `translateY(${dy}px) scale(1.02)`;
+      const dy = ev.clientY - y0, dx = ev.clientX - x0, dist = Math.hypot(dx, dy);
+      if (!active) { if (hold) { if (dist > 8) cleanup(); return; } if (dist > 6) start(); else return; }
+      moved = true;
+      if (grid) { row.style.transform = `translate(${dx}px,${dy}px) scale(1.03)`; const under = document.elementFromPoint(ev.clientX, ev.clientY)?.closest(sel); const i = under ? rows.indexOf(under) : -1; rows.forEach(r => r.classList.toggle("target", r !== row && r === under)); if (i >= 0) to = i; return; }
+      row.style.transform = `translateY(${dy}px) scale(1.02)`;
       to = Math.max(0, Math.min(rows.length - 1, from + Math.round(dy / h)));
-      rows.forEach((r, i) => { if (r === row) return; let s = 0; if (from < to && i > from && i <= to) s = -h; else if (from > to && i >= to && i < from) s = h; r.style.transform = s ? `translateY(${s}px)` : ""; });
+      rows.forEach((r, i) => { if (r === row) return; let sh = 0; if (from < to && i > from && i <= to) sh = -h; else if (from > to && i >= to && i < from) sh = h; r.style.transform = sh ? `translateY(${sh}px)` : ""; });
     };
     const up = () => {
-      row.removeEventListener("pointermove", move); row.removeEventListener("pointerup", up); row.removeEventListener("pointercancel", up);
-      row.classList.remove("dragging"); rows.forEach(r => r.style.transform = "");
-      if (to !== from) { if (to > from) rows[to].after(row); else rows[to].before(row); onDrop(from, to); }
+      cleanup(); if (!active) return;
+      row.classList.remove("dragging"); rows.forEach(r => { r.style.transform = ""; r.classList.remove("target"); });
+      if (moved) suppressClickUntil = Date.now() + 350;
+      if (to !== from) { if (to > from) rows[to].after(row); else rows[to].before(row); onDrop(from, to, row); }
     };
+    if (grip) { e.preventDefault(); start(); }
+    else if (e.pointerType === "touch" || e.pointerType === "pen") hold = setTimeout(start, 280);
     row.addEventListener("pointermove", move); row.addEventListener("pointerup", up); row.addEventListener("pointercancel", up);
   });
 }
+function reorderGoals(container) { $$("[data-goal]", container).forEach((el, i) => { const g = get(el.dataset.goal); if (g && g.order !== i) { g.order = i; put(el.dataset.goal, g, { quiet: true }); } }); }
 
 /* ---------- event handling (delegated) ---------- */
 document.addEventListener("click", async e => {
+  if (Date.now() < suppressClickUntil) { e.preventDefault(); e.stopPropagation(); return; }
   let t = e.target.closest("[data-act]"), act = t?.dataset.act; const { arg } = route();
   if (!act && e.target.closest(".item") && !e.target.closest(".txt,.grip,.x")) { t = $(".chk", e.target.closest(".item")); act = "tick"; }
+  if (!act && e.target.closest(".wish .head")) { t = e.target.closest(".wish"); act = "wopen"; }
   if (act === "toggleTheme") { const cur = lsGet("theme", "system"), isDark = document.documentElement.dataset.theme === "dark" || (cur === "system" && matchMedia("(prefers-color-scheme: dark)").matches); lsSet("theme", isDark ? "light" : "dark"); applyTheme(); return; }
   if (!$("#view").contains(e.target) && !$("#fabWrap").contains(e.target)) return;
   if (act === "newlist") { const id = newList("New list"); location.hash = "#list/" + id.slice(5); setTimeout(() => { const i = $(".title-in"); i?.focus(); i?.select(); }, 60); return; }
@@ -1270,7 +1292,7 @@ document.addEventListener("click", async e => {
     if (act === "gdone") g.done = !g.done; else { g.current = Math.max(0, (Number(g.current) || 0) + (act === "ginc" ? 1 : -1) * (Number(g.step) || 1)); if (g.target && g.current >= g.target && !g.done) { g.done = true; const r = t.getBoundingClientRect(); confetti(r.left + 20, r.top + 10); toast("🎯 Goal reached!"); } }
     g.doneAt = g.done ? Date.now() : null; put(id, g, { quiet: true }); updateGoalRow(el, g); setRing($("#view .topbar .ring"), goals().filter(x => x.done).length, goals().length); const sub = $("#view .topbar .sub"); if (sub) sub.textContent = `${goals().filter(x => !x.done).length} active`; return;
   }
-  if (act === "gtitle" || act === "stext") return;
+  if (act === "gtitle" || act === "stext" || act === "wname") return;
   if (act === "gedit") { const id = t.closest("[data-goal]").dataset.goal; goalForm({ id, ...get(id) }); return; }
   if (act === "stick" || act === "sdel") {
     const el = t.closest("[data-goal]"), id = el.dataset.goal, g = get(id), row = t.closest("[data-sub]"), sid = row.dataset.sub; if (!g) return;
@@ -1303,6 +1325,7 @@ $("#view").addEventListener("change", e => {
 $("#view").addEventListener("input", e => { if (e.target.id === "bgInt") { $("#bgphoto").style.opacity = e.target.value / 100; } });
 $("#view").addEventListener("focusout", e => {
   const t = e.target, a = t.dataset?.act;
+  if (a === "wname") { const id = t.closest("[data-wish]").dataset.wish, w = get(id), v = t.textContent.replace(/\s+/g, " ").trim(); if (!w) return; if (v && v !== w.name) { w.name = v; put(id, w, { quiet: true }); } else t.textContent = w.name; return; }
   if (a === "gtitle" || a === "stext") {
     const el = t.closest("[data-goal]"), id = el.dataset.goal, g = get(id); if (!g) return;
     const v = t.textContent.replace(/\s+/g, " ").trim();
@@ -1341,12 +1364,12 @@ $("#view").addEventListener("submit", e => {
 });
 $("#view").addEventListener("keydown", e => {
   if (e.key === "Enter" && e.target.dataset.act === "text") { e.preventDefault(); e.target.blur(); $(".addrow input")?.focus(); }
-  if (e.key === "Enter" && /^(gtitle|stext)$/.test(e.target.dataset.act || "")) { e.preventDefault(); e.target.blur(); }
-  if (e.key === "Escape" && /^(gtitle|stext)$/.test(e.target.dataset.act || "")) { const el = e.target.closest("[data-goal]"), g = get(el.dataset.goal); if (g) e.target.textContent = e.target.dataset.act === "gtitle" ? g.title : (g.subs || []).find(y => y.id === e.target.closest("[data-sub]").dataset.sub)?.text || ""; e.target.blur(); }
+  if (e.key === "Enter" && /^(gtitle|stext|wname)$/.test(e.target.dataset.act || "")) { e.preventDefault(); e.target.blur(); }
+  if (e.key === "Escape" && /^(gtitle|stext|wname)$/.test(e.target.dataset.act || "")) { const a = e.target.dataset.act; if (a === "wname") { const w = get(e.target.closest("[data-wish]").dataset.wish); if (w) e.target.textContent = w.name; } else { const el = e.target.closest("[data-goal]"), g = get(el.dataset.goal); if (g) e.target.textContent = a === "gtitle" ? g.title : (g.subs || []).find(y => y.id === e.target.closest("[data-sub]").dataset.sub)?.text || ""; } e.target.blur(); }
   if (e.key === "Enter" && e.target.dataset.act === "title") e.target.blur();
   if (e.key === "Escape" && e.target.dataset.act === "text") e.target.blur();
 });
-$("#view").addEventListener("paste", e => { if (/^(text|gtitle|stext)$/.test(e.target.dataset?.act || "")) { e.preventDefault(); document.execCommand("insertText", false, (e.clipboardData.getData("text/plain") || "").replace(/\n+/g, " ")); } });
+$("#view").addEventListener("paste", e => { if (/^(text|gtitle|stext|wname)$/.test(e.target.dataset?.act || "")) { e.preventDefault(); document.execCommand("insertText", false, (e.clipboardData.getData("text/plain") || "").replace(/\n+/g, " ")); } });
 document.addEventListener("keydown", e => {
   if (e.target.matches("input,textarea,[contenteditable]") || e.metaKey || e.ctrlKey || e.altKey) return;
   const map = { 1: "#dash", 2: "#lists", 3: "#goals", 4: "#wish", 5: "#cal", 6: "#settings" };
