@@ -352,6 +352,17 @@ kbd{font:11px Inter;border:1px solid var(--line2);border-bottom-width:2px;border
 
 /* home top row + cards */
 .crumb{margin:-2px 0 4px -10px}
+body.glance .side,body.glance .tabbar,body.glance #fabWrap{display:none!important}body.glance .content{max-width:720px;padding:16px}
+.gl{min-height:calc(100vh - 32px);display:flex;flex-direction:column;gap:18px;cursor:pointer;user-select:none;-webkit-user-select:none}
+.gl .clock{font-family:var(--font-display);font-size:clamp(56px,16vw,120px);font-weight:800;letter-spacing:-.04em;line-height:1}.gl .gdate{font-size:18px;color:var(--muted);margin-top:-6px}
+.gl .lbl{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.gl .gev{display:flex;gap:12px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--line);font-size:17px}.gl .gev b{min-width:84px;font-variant-numeric:tabular-nums}.gl .gev.past{opacity:.45}.gl .gev.now{color:var(--accent)}
+.gl .gstep{display:flex;gap:10px;align-items:center;padding:6px 0;font-size:16px}.gl .gstep i{width:10px;height:10px;border-radius:50%;background:var(--lc,var(--accent));flex:none}.gl .gstep small{color:var(--muted);margin-left:auto}
+.gl .hint{margin-top:auto;text-align:center;color:var(--muted);font-size:12px;padding-top:12px}
+.tile.dragging{z-index:5;box-shadow:var(--shadow-lg);transition:none}.tiles{touch-action:pan-y}
+.spark{display:block;width:100%;height:44px;margin-top:8px}.spark path{fill:none;stroke:var(--accent);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}.spark .area{fill:var(--accent);opacity:.1;stroke:none}.spark circle{fill:var(--ok)}
+.budget{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}.budget .bar{height:10px;border-radius:999px;background:var(--line);overflow:hidden;display:flex}.budget .bar i{display:block;height:100%}.budget .bar .spent{background:var(--accent)}.budget .bar .plan{background:repeating-linear-gradient(135deg,var(--accent) 0 4px,transparent 4px 8px);opacity:.7}.budget .bar .over{background:var(--bad)}
+.budget .row{font-size:13px;color:var(--muted);flex-wrap:wrap}.budget input{width:90px;padding:4px 8px}
 .phone-only{display:none}
 @media (max-width:899px){.phone-only{display:inline-flex}}
 .dash-cols{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:26px}
@@ -479,7 +490,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
     <div class="brand"><img src="icon.svg" alt=""><span id="brandName">Hub</span></div>
     <nav id="sideNav"><div class="ind"></div></nav>
     <div class="art" id="sideArt"></div>
-    <div class="foot"><div class="row"><span class="dot" id="syncDot"></span><span id="syncText">Not connected</span></div><div class="row"><span class="sp"></span><button class="btn ghost icon" data-act="toggleTheme" title="Toggle theme" id="themeBtn"></button></div></div>
+    <div class="foot"><div class="row"><span class="dot" id="syncDot"></span><span id="syncText">Not connected</span></div><div class="row"><span class="sp"></span><a class="btn ghost icon" href="#glance" title="Glance screen (g)" id="glanceBtn"></a><button class="btn ghost icon" data-act="toggleTheme" title="Toggle theme" id="themeBtn"></button></div></div>
   </aside>
   <div class="content"><div id="view" class="view"></div></div>
 </div>
@@ -545,6 +556,7 @@ const I = {   /* icons */
   check: '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
   target: '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>',
   home: '<svg class="ic" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v9a2 2 0 0 1-2 2h-4v-7H9v7H5a2 2 0 0 1-2-2z"/></svg>',
+  glance: '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
   note: '<svg class="ic" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h10"/></svg>',
   flame: '<svg class="ic" viewBox="0 0 24 24"><path d="M12 22c4.4 0 7-3 7-7 0-4-3-6-3-9-2 1-3 3-3 5-1-1-2-3-1-6-4 2-7 6-7 10 0 4 2.6 7 7 7z"/></svg>',
 };
@@ -605,6 +617,14 @@ function delDoc(id, msg, o) { const old = get(id); if (!old) return; del(id, o);
 const renamed = (old, restore) => toast(`Renamed · was “${old.length > 24 ? old.slice(0, 24) + "…" : old}”`, 4500, { label: "Undo", fn: restore });
 const patch = (id, fn, o) => { const d = get(id); if (d) { fn(d); put(id, d, o); } };
 
+const unionPts = (a = [], b = []) => { const m = new Map(); [...a, ...b].forEach(p => { if (p && p[0]) m.set(p[0], p); }); return [...m.values()].sort((x, y) => x[0] < y[0] ? -1 : 1).slice(-180); };
+function recordPrice(wid, pr) { const best = pr?.offers?.[0]; if (!best || !pr.checked_at) return; const id = "pricehist:" + wid, h = get(id) || { points: [] }; if (h.points.some(p => p[0] === pr.checked_at)) return; h.points = unionPts(h.points, [[pr.checked_at, Math.round(best.total * 100) / 100, best.store]]); put(id, h, { quiet: true }); }
+function sparkline(points) {
+  if (points.length < 2) return ""; const W = 240, H = 44, ys = points.map(p => p[1]), lo = Math.min(...ys), hi = Math.max(...ys), span = hi - lo || 1;
+  const X = i => (i / (points.length - 1)) * (W - 8) + 4, Y = v => H - 6 - ((v - lo) / span) * (H - 14);
+  const d = points.map((p, i) => `${i ? "L" : "M"}${X(i).toFixed(1)} ${Y(p[1]).toFixed(1)}`).join(" "), li = ys.indexOf(lo);
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><path class="area" d="${d} L${X(points.length - 1).toFixed(1)} ${H} L4 ${H} Z"/><path d="${d}"/><circle cx="${X(li).toFixed(1)}" cy="${Y(lo).toFixed(1)}" r="3"/></svg><div class="small muted">Lowest ${money(lo)} on ${new Date(points[li][0]).toLocaleDateString([], { month: "short", day: "numeric" })}${points[li][2] ? " at " + esc(points[li][2]) : ""} · highest ${money(hi)} · ${points.length} checks</div>`;
+}
 const SYNC = { cfg: lsGet("sync", null), state: "off", msg: "Not connected", lastPull: null, timer: null };
 function setSync(state, msg) {
   SYNC.state = state; SYNC.msg = msg;
@@ -654,7 +674,9 @@ async function pull(full = false) {
       if (DB.pending.has(row.id)) continue;
       const cur = DB.docs[row.id];
       if (cur && JSON.stringify(cur.data) === JSON.stringify(row.data)) continue;
+      if (row.id.startsWith("pricehist:") && cur?.data?.points) row.data.points = unionPts(cur.data.points, row.data.points);
       DB.docs[row.id] = { data: row.data, at: Date.parse(row.updated_at) }; changed = true;
+      if (row.id.startsWith("price:")) recordPrice(row.id.slice(6), row.data);
     }
     persist(); SYNC.lastPull = new Date();
     setSync("ok", "Synced " + SYNC.lastPull.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
@@ -791,6 +813,18 @@ const BACKDROPS = {
     for (let i = 0; i < 16; i++) { const x = r() * 480, y = r() * 480, sc = .6 + r() * .8, rot = r() * 360, c = cols[i % 4]; p += `<g transform="translate(${x.toFixed(0)} ${y.toFixed(0)}) rotate(${rot.toFixed(0)}) scale(${sc.toFixed(2)})"><path d="M0 -26 C 14 -18 20 -4 14 12 C 8 24 -8 24 -14 12 C -20 -4 -14 -18 0 -26Z M0 -22 L0 20" fill="${c}" fill-opacity=".14" stroke="${c}" stroke-opacity=".3" stroke-width="1.2"/></g>`; }
     return { backgroundImage: svgUri(`<svg xmlns="http://www.w3.org/2000/svg" width="480" height="480" viewBox="0 0 480 480">${p}</svg>`), backgroundSize: "480px 480px" }; } },
 };
+BACKDROPS.snow = { name: "Snow", css: a => { const r = prng(21); let p = ""; for (let i = 0; i < 60; i++) { const x = r() * 480, y = r() * 480, s = .8 + r() * 2; p += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${s.toFixed(1)}" fill="${a}" fill-opacity="${(.12 + r() * .3).toFixed(2)}"/>`; }
+    for (let i = 0; i < 7; i++) { const x = r() * 480, y = r() * 480, s = 7 + r() * 8, rot = r() * 60; p += `<g transform="translate(${x.toFixed(0)} ${y.toFixed(0)}) rotate(${rot.toFixed(0)})" stroke="${a}" stroke-opacity=".3" stroke-width="1.3" stroke-linecap="round">${[0, 60, 120].map(d => `<path transform="rotate(${d})" d="M0 ${-s} L0 ${s} M0 ${-s * .6} L${s * .25} ${-s * .85} M0 ${-s * .6} L${-s * .25} ${-s * .85} M0 ${s * .6} L${s * .25} ${s * .85} M0 ${s * .6} L${-s * .25} ${s * .85}"/>`).join("")}</g>`; }
+    return { backgroundImage: svgUri(`<svg xmlns="http://www.w3.org/2000/svg" width="480" height="480" viewBox="0 0 480 480">${p}</svg>`), backgroundSize: "480px 480px" }; } };
+BACKDROPS.blossom = { name: "Blossom", css: () => { const r = prng(13), cols = ["#f9a8d4", "#f472b6", "#fbcfe8", "#fda4af"]; let p = "";
+    for (let i = 0; i < 18; i++) { const x = r() * 480, y = r() * 480, sc = .5 + r() * .7, rot = r() * 360, c = cols[i % 4]; p += `<g transform="translate(${x.toFixed(0)} ${y.toFixed(0)}) rotate(${rot.toFixed(0)}) scale(${sc.toFixed(2)})"><path d="M0 -18 C 10 -16 14 -6 8 2 C 2 10 -8 8 -10 0 C -12 -8 -8 -16 0 -18Z" fill="${c}" fill-opacity=".35"/><path d="M0 -14 L0 -2" stroke="${c}" stroke-opacity=".5" stroke-width="1.2"/></g>`; }
+    return { backgroundImage: svgUri(`<svg xmlns="http://www.w3.org/2000/svg" width="480" height="480" viewBox="0 0 480 480">${p}</svg>`), backgroundSize: "480px 480px" }; } };
+BACKDROPS.waves = { name: "Summer waves", css: a => { let p = ""; for (let i = 0; i < 6; i++) { const y = 60 + i * 70; p += `<path d="M0 ${y} ${[...Array(7)].map((_, k) => `Q ${k * 80 + 20} ${y - 14} ${k * 80 + 40} ${y} T ${k * 80 + 80} ${y}`).join(" ")}" fill="none" stroke="${a}" stroke-opacity=".14" stroke-width="1.5"/>`; }
+    p += `<circle cx="400" cy="44" r="22" fill="#f59e0b" fill-opacity=".18"/>${[...Array(8)].map(k => `<path transform="rotate(${k * 45} 400 44)" d="M400 10 L400 2" stroke="#f59e0b" stroke-opacity=".3" stroke-width="2" stroke-linecap="round"/>`).join("")}`;
+    return { backgroundImage: svgUri(`<svg xmlns="http://www.w3.org/2000/svg" width="480" height="480" viewBox="0 0 480 480">${p}</svg>`), backgroundSize: "480px 480px" }; } };
+const seasonKind = (m = new Date().getMonth()) => m === 11 || m <= 1 ? "snow" : m <= 4 ? "blossom" : m <= 7 ? "waves" : "leaves";
+BACKDROPS.season = { name: "Seasonal (auto)", css: a => BACKDROPS[seasonKind()].css(a) };
+function seasonEmoji() { const d = new Date(), m = d.getMonth() + 1, day = d.getDate(); if (m === 10 && day >= 24) return "🎃"; if (m === 12 && day >= 20 && day <= 26) return "🎄"; if ((m === 12 && day === 31) || (m === 1 && day === 1)) return "🎆"; if (m === 2 && day === 14) return "❤️"; if (m === 11 && d.getDay() === 4 && day >= 22 && day <= 28) return "🦃"; if (m === 12 || m === 1) return "❄️"; if (m >= 6 && m <= 8) return "☀️"; return "👋"; }
 const SIDE_ART = a => `<svg viewBox="0 0 240 120" xmlns="http://www.w3.org/2000/svg"><path d="M0 100 L30 70 L55 85 L85 45 L110 65 L140 30 L170 60 L200 40 L240 75 L240 120 L0 120Z" fill="${a}" fill-opacity=".10"/><path d="M0 100 L30 70 L55 85 L85 45 L110 65 L140 30 L170 60 L200 40 L240 75" fill="none" stroke="${a}" stroke-opacity=".45" stroke-width="1.5" stroke-linejoin="round"/><g stroke="${a}" stroke-opacity=".8" stroke-width="1.6" stroke-linecap="round" fill="none"><circle cx="139" cy="19" r="2.6"/><path d="M139 22 L139 31 M139 25 L133 29 M139 25 L145 22 M139 31 L135 37 M139 31 L144 36"/></g><circle cx="205" cy="18" r="7" fill="${a}" fill-opacity=".25"/></svg>`;
 function applyBackdrop() {
   const p = PREF(), kind = p.backdrop || "dots", a = (ACCENTS[p.accent] || ACCENTS.indigo)[0], b = document.body, ph = $("#bgphoto");
@@ -888,6 +922,19 @@ function trainingCard() {
 const PREF = () => lsGet("pref", {});
 const V = {};
 V.goals = goalsView;
+V.glance = () => {
+  const now = new Date(), tod = occurrences(today(), today()), picks = focusPicks().map(focusResolve).filter(Boolean), ws = workStats(weekStart(today()), addDays(weekStart(today()), 6));
+  const steps = []; for (const g of goals().filter(g => !g.done)) for (const x of subLeaves(g).filter(x => !x.done)) { steps.push({ g, x }); if (steps.length >= 5) break; }
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  return `<div class="gl" data-go="#dash"><div><div class="clock" id="glClock">${now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</div><div class="gdate">${now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}${ws.shifts ? ` · ${fmtH(ws.hours)} h this week` : ""}</div></div>
+    <div><div class="lbl">Today</div>${tod.length ? tod.map(({ ev }) => { const st = ev.start ? minutes(ev.start) : -1, en = ev.end ? minutes(ev.end) : st + 60; return `<div class="gev${st >= 0 && en < nowMin ? " past" : st >= 0 && st <= nowMin && nowMin < en ? " now" : ""}" style="--ec:${evColor(ev)}"><b>${ev.start ? fmtTime(ev.start) : "All day"}</b><span>${esc(ev.title)}${ev.loc ? ` <span class="muted">· ${esc(ev.loc)}</span>` : ""}</span></div>`; }).join("") : '<div class="muted">Nothing scheduled.</div>'}</div>
+    ${picks.length ? `<div><div class="lbl">Focus</div>${picks.map(pk => `<div class="gstep${pk.done ? " past" : ""}"><i style="--lc:${pk.done ? "var(--ok)" : "var(--accent)"}"></i><span${pk.done ? ' style="text-decoration:line-through"' : ""}>${esc(pk.text)}</span><small>${esc(pk.src)}</small></div>`).join("")}</div>` : ""}
+    ${steps.length ? `<div><div class="lbl">Next steps</div>${steps.map(({ g, x }) => `<div class="gstep"><i style="--lc:${g.color || COLORS[0]}"></i><span>${esc(x.text)}</span><small>${esc(g.title)}</small></div>`).join("")}</div>` : ""}
+    <div class="hint">Tap anywhere to go back</div></div>`;
+};
+let wakeLock = null;
+async function glanceWake(on) { try { if (on && !wakeLock && navigator.wakeLock) { wakeLock = await navigator.wakeLock.request("screen"); wakeLock.addEventListener("release", () => { wakeLock = null; }); } else if (!on && wakeLock) { await wakeLock.release(); wakeLock = null; } } catch {} }
+setInterval(() => { const c = $("#glClock"); if (c) c.textContent = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }); }, 15000);
 const homeBtn = () => `<button class="btn ghost" data-go="#dash">${I.back} Home</button>`;
 const topbar = (title, sub, right = "") => `${route().name !== "dash" ? `<div class="crumb">${homeBtn()}</div>` : ""}<div class="topbar"><div><h1>${title}</h1>${sub ? `<div class="sub">${sub}</div>` : ""}</div><span class="sp"></span>${right}</div>`;
 const emptyBox = (ill, text) => `<div class="empty"><div class="ill">${ILL[ill]}</div>${text}</div>`;
@@ -902,7 +949,7 @@ V.dash = () => {
   const tot = ls.reduce((a, l) => a + l.items.length, 0), done = ls.reduce((a, l) => a + l.items.filter(i => i.done).length, 0);
   const tod = occurrences(today(), today()), up = occurrences(addDays(today(), 1), addDays(today(), 7)).slice(0, 5);
   const cover = PREF().heroCover && lsGet("bgimg", null);
-  const hero = `<div class="hero${cover ? " cover" : ""}"${cover ? ` style="background-image:url(${cover})"` : ""}>${cover ? '<div class="coverlay"></div>' : ""}<div class="sp" style="min-width:0"><div class="row"><div class="greet">${greet}${name ? ", " + esc(name) : ""} 👋</div><span class="sp"></span><button class="btn ghost icon phone-only" data-go="#settings" style="color:#fff" title="Settings">${I.cog}</button></div><div class="date">${new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</div>${weekSummary()}
+  const hero = `<div class="hero${cover ? " cover" : ""}"${cover ? ` style="background-image:url(${cover})"` : ""}>${cover ? '<div class="coverlay"></div>' : ""}<div class="sp" style="min-width:0"><div class="row"><div class="greet">${greet}${name ? ", " + esc(name) : ""} ${seasonEmoji()}</div><span class="sp"></span><button class="btn ghost icon phone-only" data-go="#glance" style="color:#fff" title="Glance screen">${I.glance}</button><button class="btn ghost icon phone-only" data-go="#settings" style="color:#fff" title="Settings">${I.cog}</button></div><div class="date">${new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</div>${weekSummary()}
     <div class="stat"><div><b>${tod.length}</b>today</div><div><b>${tot - done}</b>open tasks</div><div><b>${w.length - wd}</b>to buy</div></div></div>${ring(done, tot, 84, "lg")}</div>`;
   const w0 = weekStart(today()), wdays = [...Array(7)].map((_, i) => addDays(w0, i)), wocc = occurrences(w0, addDays(w0, 6));
   const weekHead = `<div class="sec-h"><h2>This week</h2><span class="n">${fmtDate(w0, { month: "short", day: "numeric" })} – ${fmtDate(addDays(w0, 6), { month: "short", day: "numeric" })} · ${wocc.length} event${wocc.length === 1 ? "" : "s"}</span><span class="sp"></span><button class="btn ghost" data-act="review" title="Weekly review">Review</button><button class="btn ghost" data-go="#cal">Calendar ${I.chev}</button></div>`;
@@ -910,7 +957,8 @@ V.dash = () => {
     ? `<section>${weekHead}<div class="card agenda" style="padding:6px 12px 12px">${wdays.map(dd => { const xs = wocc.filter(x => x.date === dd); if (!xs.length && dd !== today()) return ""; return `<div class="dh${dd === today() ? " today" : ""}">${dd === today() ? "Today" : fmtDate(dd, { weekday: "long", day: "numeric" })}</div>${xs.map(({ ev, date }) => evRow(ev, date, true)).join("") || `<div class="muted small" style="padding:4px 8px">Nothing today.</div>`}`; }).join("") || `<div class="empty" style="padding:18px">Nothing this week.</div>`}</div></section>`
     : `<section>${weekHead}<div class="wk">${wdays.map(dd => { const xs = wocc.filter(x => x.date === dd); return `<div class="wkd${dd === today() ? " today" : ""}${dd < today() ? " past" : ""}" data-day="${dd}"><div class="h">${fmtDate(dd, { weekday: "short" })}<b>${parseYmd(dd).getDate()}</b></div>${xs.map(({ ev }) => `<div class="wke" data-ev="${ev.id}" style="--ec:${evColor(ev)}"><b>${esc(ev.title)}</b><span>${ev.start ? fmtTime(ev.start) + (ev.end ? " – " + fmtTime(ev.end) : "") : "All day"}</span></div>`).join("") || '<div class="none">Free</div>'}</div>`; }).join("")}</div></section>`;
   if (!phone) {
-    let o = `<div class="dash-cols"><div class="col">${trainingCard()}</div><div class="mid">${hero}${focusCard()}${todayCard}</div><div class="col">${goalsCard(8)}</div></div>`;
+    const L = PREF().swapCols ? goalsCard(8) : trainingCard(), R = PREF().swapCols ? trainingCard() : goalsCard(8);
+    let o = `<div class="dash-cols"><div class="col">${L}</div><div class="mid">${hero}${focusCard()}${todayCard}</div><div class="col">${R}</div></div>`;
     o += `<div class="dash-cols"><div class="col"></div><section class="mid"><div class="sec-h"><h2>Lists</h2><span class="n">${done}/${tot} done</span><span class="sp"></span><button class="btn ghost" data-go="#lists">All lists ${I.chev}</button></div><div class="grid">${ls.map(listCard).join("")}`;
     const due = w.filter(i => !i.done && i.by).slice(0, 3);
     o += `<div class="card sq" style="--lc:#f59e0b;--i:${ls.length}" data-go="#wish"><div class="emoji">🛍️</div><h3>Wishlist</h3><div class="mini">${due.map(i => `<div>${esc(i.name)} · ${relDay(i.by)}</div>`).join("") || (w.length ? `<div>${w.length - wd} to buy</div>` : '<span class="chip grey">Empty</span>')}</div><div class="foot"><span><b>${wd}</b>/${w.length}</span>${ring(wd, w.length, 54)}</div></div>`;
@@ -918,11 +966,16 @@ V.dash = () => {
     return o;
   }
   const nextDue = w.filter(i => !i.done && i.by)[0], nextEv = up[0];
-  return hero + focusCard() + `<section><div class="tiles">${trainingCard()}${goalsCard()}</div></section>` + todayCard + `<section><div class="sec-h"><h2>Sections</h2></div><div class="tiles">
-    <div class="card tile" data-go="#lists"><div class="ti">${I.list}</div><div class="tt"><b>Lists</b><span>${ls.length} lists · ${tot - done} open</span></div>${I.chev.replace('class="ic"', 'class="ic chev"')}</div>
-    <div class="card tile" data-go="#wish"><div class="ti">${I.cart}</div><div class="tt"><b>Wishlist</b><span>${w.length - wd} to buy${nextDue ? " · " + esc(nextDue.name) + " " + relDay(nextDue.by) : ""}</span></div>${I.chev.replace('class="ic"', 'class="ic chev"')}</div>
-    <div class="card tile" data-go="#cal"><div class="ti">${I.cal}</div><div class="tt"><b>Calendar</b><span>${nextEv ? esc(nextEv.ev.title) + " · " + fmtDate(nextEv.date, { weekday: "short" }) + " " + fmtTime(nextEv.ev.start) : "nothing in the next week"}</span></div>${I.chev.replace('class="ic"', 'class="ic chev"')}</div>
-    <div class="card tile" data-go="#settings"><div class="ti">${I.cog}</div><div class="tt"><b>Settings</b><span>${SYNC.cfg ? SYNC.msg : "not synced"}</span></div>${I.chev.replace('class="ic"', 'class="ic chev"')}</div></div></section>`;
+  return hero + focusCard() + `<section><div class="tiles">${trainingCard()}${goalsCard()}</div></section>` + todayCard + `<section><div class="sec-h"><h2>Sections</h2><span class="n">hold a tile to reorder</span></div><div class="tiles" id="secTiles">${tileOrder().map(k => TILES[k]({ ls, tot, done, w, wd, nextDue, nextEv })).join("")}</div></section>`;
+};
+const TILE_KEYS = ["lists", "wish", "cal", "settings"];
+const tileOrder = () => { const o = (PREF().tileOrder || []).filter(k => TILE_KEYS.includes(k)); return o.concat(TILE_KEYS.filter(k => !o.includes(k))); };
+const tile = (k, ic, title, sub) => `<div class="card tile" data-go="#${k}" data-tile="${k}"><div class="ti">${ic}</div><div class="tt"><b>${title}</b><span>${sub}</span></div>${I.chev.replace('class="ic"', 'class="ic chev"')}</div>`;
+const TILES = {
+  lists: ({ ls, tot, done }) => tile("lists", I.list, "Lists", `${ls.length} lists · ${tot - done} open`),
+  wish: ({ w, wd, nextDue }) => tile("wish", I.cart, "Wishlist", `${w.length - wd} to buy${nextDue ? " · " + esc(nextDue.name) + " " + relDay(nextDue.by) : ""}`),
+  cal: ({ nextEv }) => tile("cal", I.cal, "Calendar", nextEv ? esc(nextEv.ev.title) + " · " + fmtDate(nextEv.date, { weekday: "short" }) + " " + fmtTime(nextEv.ev.start) : "nothing in the next week"),
+  settings: () => tile("settings", I.cog, "Settings", SYNC.cfg ? SYNC.msg : "not synced"),
 };
 V.lists = () => `${topbar("Lists", `${lists().length} lists`)}<div class="grid">${lists().map(listCard).join("")}<div class="card sq add" style="--i:${lists().length}" data-act="newlist">${I.plus}New list</div></div>`;
 const itemRow = it => `<div class="item${it.done ? " done" : ""}" data-item="${it.id}"><span class="grip">${I.grip}</span><button class="chk" role="checkbox" aria-checked="${!!it.done}" data-act="tick">${I.check}</button><div class="txt ren" contenteditable="true" spellcheck="false" data-act="text">${esc(it.text)}</div><span class="fill"></span><button class="sb" data-act="inoteadd" title="Note">${I.note}</button><button class="x" data-act="delItem" title="Remove">${I.x}</button>${it.note != null ? `<div class="inote" contenteditable="true" data-act="inote">${esc(it.note)}</div>` : ""}</div>`;
@@ -947,6 +1000,7 @@ const wishRow = it => {
       o += `<table><tr><th>Store</th><th>Price</th><th>Ship</th><th>Tax</th><th>Total</th><th></th></tr>`;
       pr.offers.forEach((x, i) => o += `<tr class="${i ? "" : "best"}"><td>${esc(x.store)}</td><td>${money(x.price)}</td><td>${x.ship == null ? "?" : money(x.ship)}</td><td>${money(x.tax)}</td><td>${money(x.total)}</td><td><a href="${esc(x.link)}" target="_blank" rel="noopener">${I.ext}</a></td></tr>`);
       o += `</table><div class="small muted" style="margin-top:6px">${esc(pr.title || "")} · checked ${new Date(pr.checked_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}${pr.query ? " · searched “" + esc(pr.query) + "”" : ""}</div>`;
+      { const hp = get("pricehist:" + it.id.slice(5))?.points || []; if (hp.length >= 2) o += sparkline(hp); }
       if (it.budget && best) o += `<div class="row" style="margin-top:8px"><span class="small muted">Budget</span><div class="bar"><i class="${best.total > it.budget ? "over" : ""}" data-w="${Math.min(100, best.total / it.budget * 100)}"></i></div><span class="small">${money(best.total)} / ${money(it.budget)}</span></div>`;
     } else o += `<div class="small muted">No price check yet. The price bot runs on its schedule (see Settings).</div>`;
     o += `</div>`;
@@ -956,10 +1010,20 @@ const wishRow = it => {
 V.wish = () => {
   const w = wishItems(), wd = w.filter(i => i.done).length, meta = get("meta:pricebot");
   return `${topbar("Wishlist", `${w.length - wd} to buy`, ring(wd, w.length, 56))}
-  <div class="card"><form class="addrow wishadd" data-act="addWish" style="margin:0 0 8px"><input class="in" placeholder="Something you need to buy…" autocomplete="off"><input class="in" type="date" style="width:auto" title="Need by"><button class="btn primary">${I.plus}Add</button></form>
+  ${budgetBar(w)}<div class="card"><form class="addrow wishadd" data-act="addWish" style="margin:0 0 8px"><input class="in" placeholder="Something you need to buy…" autocomplete="off"><input class="in" type="date" style="width:auto" title="Need by"><button class="btn primary">${I.plus}Add</button></form>
   <div id="wishes">${w.map(wishRow).join("") || emptyBox("cart", "Nothing on the wishlist yet.")}</div></div>
   <p class="small muted" style="margin-top:10px">Prices come from the price bot: it searches Google Shopping, keeps only trusted stores, adds estimated tax and listed shipping, and saves the cheapest few here.${meta?.ran_at ? " Last run " + new Date(meta.ran_at).toLocaleString() + (meta.note ? " · " + esc(meta.note) : "") : " It has not run yet."}</p>`;
 };
+function wishCost(it) { const best = get("price:" + it.id.slice(5))?.offers?.[0]; return (best ? best.total : Number(it.budget) || 0) * (Number(it.qty) || 1); }
+function budgetBar(w) {
+  const m = today().slice(0, 7), B = get("settings:budget") || {}, lim = Number(B.monthly) || 0;
+  const spent = w.filter(i => i.done && i.doneAt && ymd(new Date(i.doneAt)).slice(0, 7) === m).reduce((k, i) => k + wishCost(i), 0);
+  const planned = w.filter(i => !i.done && i.by && i.by.slice(0, 7) === m).reduce((k, i) => k + wishCost(i), 0);
+  const tot = Math.max(lim, spent + planned) || 1, sp = Math.min(100, spent / tot * 100), pl = Math.min(100 - sp, planned / tot * 100), over = lim && spent + planned > lim;
+  return `<div class="card budget"><div class="row"><b style="color:var(--text)">${new Date().toLocaleDateString(undefined, { month: "long" })} budget</b><span class="sp"></span><label class="row small">$ <input class="in" type="number" min="0" step="1" id="budgetIn" value="${lim || ""}" placeholder="set"></label></div>
+    <div class="bar"><i class="spent${over ? " over" : ""}" style="width:${sp}%"></i><i class="plan" style="width:${pl}%"></i></div>
+    <div class="row"><span><b>${money(spent)}</b> spent</span><span>·</span><span><b>${money(planned)}</b> planned (need-by this month)</span>${lim ? `<span>·</span><span><b>${money(Math.max(0, lim - spent - planned))}</b> left${over ? ` <span style="color:var(--bad)">(${money(spent + planned - lim)} over)</span>` : ""}</span>` : `<span>· set a monthly amount to see what is left</span>`}</div></div>`;
+}
 function updateWishHeader() { const w = wishItems(), wd = w.filter(i => i.done).length; setRing($("#view .topbar .ring"), wd, w.length); const s = $("#view .topbar .sub"); if (s) s.textContent = `${w.length - wd} to buy`; }
 const CAL = { view: lsGet("calview", "month"), anchor: today(), dir: "", armed: null };
 const START_H = 6, END_H = 24, HOUR_PX = 48;
@@ -1260,7 +1324,8 @@ V.settings = () => {
     <div class="bdgrid">${Object.entries(BACKDROPS).map(([k, v]) => `<div class="bd${(p.backdrop || "dots") === k ? " on" : ""}" data-bd="${k}"><span>${v.name}</span></div>`).join("")}<div class="bd${p.backdrop === "photo" ? " on" : ""}" data-bd="photo"><span>${lsGet("bgimg", null) ? "Your photo" : "Upload photo…"}</span></div></div>
     <div id="photoOpts" style="display:${p.backdrop === "photo" ? "block" : "none"}"><label class="field">Photo intensity</label><input type="range" id="bgInt" min="10" max="100" value="${p.bgIntensity ?? 60}">
       <div class="row wrap" style="margin-top:8px"><label class="row small"><input type="checkbox" id="bgBlur" ${p.bgBlur ? "checked" : ""}> Blur it</label><label class="row small"><input type="checkbox" id="heroCover" ${p.heroCover ? "checked" : ""}> Also use it on the greeting card</label><span class="sp"></span><button class="btn ghost" data-act="photoPick">Change photo</button><button class="btn ghost danger" data-act="photoRemove">Remove</button></div></div>
-    <label class="row small" style="margin-top:12px"><input type="checkbox" id="sideArt" ${p.sideArt === false ? "" : "checked"}> Ridge drawing in the sidebar</label></div>
+    <label class="row small" style="margin-top:12px"><input type="checkbox" id="sideArt" ${p.sideArt === false ? "" : "checked"}> Ridge drawing in the sidebar</label>
+    <label class="row small" style="margin-top:8px"><input type="checkbox" id="swapCols" ${p.swapCols ? "checked" : ""}> Desktop Home: Goals on the left, Training on the right</label></div>
   <div class="card"><h3>Sync between devices</h3><p class="small muted" style="margin:2px 0 4px">Your own sync server on Cloudflare. Enter the same address and secret word on every device. <span class="row" style="display:inline-flex;gap:6px"><span class="dot" id="syncDot2"></span><span id="syncStatus">${esc(SYNC.msg)}</span></span></p>
     <label class="field">Server address</label><input class="in" id="sUrl" value="${esc(c.url || "")}" placeholder="https://hub-sync.yourname.workers.dev">
     <label class="field">Secret word</label><input class="in" id="sSecret" type="password" value="${esc(c.secret || "")}">
@@ -1293,7 +1358,7 @@ const PHONE_TABS = ["dash", "lists", "goals", "cal", "wish"];
 const isPhone = () => !matchMedia("(min-width:900px)").matches;
 function buildNav() {
   const mk = ks => TABS.filter(([k]) => !ks || ks.includes(k)).map(([k, t, ic]) => `<a href="#${k}" data-t="${k}">${ic}<span>${t}</span></a>`).join("");
-  $("#sideNav").insertAdjacentHTML("beforeend", mk()); $("#tabbar").insertAdjacentHTML("beforeend", mk(PHONE_TABS));
+  $("#sideNav").insertAdjacentHTML("beforeend", mk()); $("#tabbar").insertAdjacentHTML("beforeend", mk(PHONE_TABS)); $("#glanceBtn").innerHTML = I.glance;
 }
 function route() { const h = location.hash.replace(/^#/, "") || "dash"; const [name, ...rest] = h.split("/"); return { name: V[name] ? name : "dash", arg: rest.join("/") }; }
 function moveInd() {
@@ -1308,7 +1373,7 @@ let lastView = null;
 function render() {
   const { name, arg } = route(), tab = name === "list" ? "lists" : name;
   $$("#sideNav a,#tabbar a").forEach(a => a.classList.toggle("on", a.dataset.t === tab));
-  const main = $("#view"); $(".content").classList.toggle("wide", name === "dash");
+  const main = $("#view"); $(".content").classList.toggle("wide", name === "dash"); document.body.classList.toggle("glance", name === "glance"); glanceWake(name === "glance");
   const addIn = $(".addrow input.in", main), keepAdd = addIn && document.activeElement === addIn ? addIn.value : null;
   main.innerHTML = V[name](arg);
   if (lastView !== name + "/" + arg) { main.classList.remove("view"); main.offsetHeight; main.classList.add("view"); }
@@ -1317,6 +1382,7 @@ function render() {
   if (name === "settings") { const a = (ACCENTS[PREF().accent] || ACCENTS.indigo)[0]; $$("[data-bd]", main).forEach(el => { const k = el.dataset.bd; if (k === "photo") { const img = lsGet("bgimg", null); if (img) el.style.backgroundImage = `url(${img})`; } else { const c = BACKDROPS[k].css(a); Object.assign(el.style, c); if (c.backgroundAttachment) el.style.backgroundAttachment = "scroll"; } }); }
   animateRings(main); requestAnimationFrame(() => $$(".bar i[data-w],.gbar i[data-w]", main).forEach(i => i.style.width = i.dataset.w + "%"));
   if (name === "goals") initGoalDrag();
+  if (name === "dash") dragInit($("#secTiles"), () => lsSet("pref", { ...PREF(), tileOrder: $$("[data-tile]", $("#secTiles")).map(t => t.dataset.tile) }), ".tile");
   if (name === "wish") dragInit($("#wishes"), () => { $$("[data-wish]", $("#wishes")).forEach((el, i) => { const w = get(el.dataset.wish); if (w && w.order !== i) { w.order = i; put(el.dataset.wish, w, { quiet: true }); } }); }, ".wish");
   $$(".grid", main).forEach(gr => dragInit(gr, () => { $$(".sq[data-go^='#list/']", gr).forEach((el, i) => { const id = "list:" + el.dataset.go.slice(6), l = get(id); if (l && l.order !== i) { l.order = i; put(id, l, { quiet: true }); } }); }, ".sq[data-go^='#list/']", { grid: true }));
   if (name === "list") dragInit($("#items"), (from, to) => patch("list:" + arg, l => { const [it] = l.items.splice(from, 1); l.items.splice(to, 0, it); }, { quiet: true }));
@@ -1473,6 +1539,8 @@ function pickPhoto() {
 }
 $("#view").addEventListener("change", e => {
   const { arg } = route(), t = e.target;
+  if (t.id === "budgetIn") { put("settings:budget", { ...(get("settings:budget") || {}), monthly: Number(t.value) || 0 }, { quiet: true }); render(); return; }
+  if (t.id === "swapCols") { lsSet("pref", { ...PREF(), swapCols: t.checked }); toast("Saved"); return; }
   if (t.id === "bgInt" || t.id === "bgBlur" || t.id === "heroCover" || t.id === "sideArt") { lsSet("pref", { ...PREF(), bgIntensity: +$("#bgInt").value, bgBlur: $("#bgBlur").checked, heroCover: $("#heroCover").checked, sideArt: $("#sideArt").checked }); applyTheme(); return; }
   if (t.dataset.act === "title") patch("list:" + arg, l => l.title = t.value.trim() || "Untitled", { quiet: true });
 });
@@ -1540,6 +1608,7 @@ document.addEventListener("keydown", e => {
   if (e.target.matches("input,textarea,[contenteditable]") || e.metaKey || e.ctrlKey || e.altKey) return;
   const map = { 1: "#dash", 2: "#lists", 3: "#goals", 4: "#wish", 5: "#cal", 6: "#settings" };
   if (map[e.key]) location.hash = map[e.key];
+  if (e.key === "g") location.hash = route().name === "glance" ? "#dash" : "#glance";
   if (e.key === "n" && route().name === "cal") eventForm({});
   if (route().name === "cal") { const vm = { m: "month", w: "week", d: "day", y: "year" }; if (vm[e.key]) setView(vm[e.key]); if (e.key === "Escape" && CAL.armed) { CAL.armed = null; render(); } if (e.key === "ArrowLeft") calMove(-1); if (e.key === "ArrowRight") calMove(1); }
   if (e.key === "n" && route().name === "wish") wishForm({});
