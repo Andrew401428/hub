@@ -506,8 +506,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <div id="toasts"></div>
 <script>
 {
-const APP_VERSION = "0.10.3";
+const APP_VERSION = "0.10.4";
 const CHANGELOG = [
+  "0.10.4 calendar view buttons ordered shortest to longest: Day, Week, Month, Year",
   "0.10.3 dragging fixes: a fast mouse drag no longer drops the row, pressing a step no longer also moves its goal card, holding the mouse still lifts a row like a long-press on the phone",
   "0.10.2 rename only on the text itself (names and notes now hug their words), press and hold any empty part of a row to move it; fold arrows to open and close a goal's steps and a step's sub-steps (remembered per device)",
   "0.10.1 goal steps can have a due date (chip turns orange within 3 days, red when late; the calendar button's menu adds one) and a link that opens in a new tab",
@@ -1232,7 +1233,7 @@ V.cal = () => {
   const ps = presets(), armed = ps.find(p => p.id === CAL.armed);
   const pchip = p => `<button class="pchip${CAL.armed === p.id ? " on" : ""}" data-preset="${p.id}" style="--pc:${p.color || "var(--accent)"}">${esc(p.name)}<small>${fmtTime(p.start)} – ${fmtTime(p.end)}</small></button>`;
   let o = `<div class="crumb">${homeBtn()}</div><div class="cal-h"><button class="btn ghost icon" data-act="calPrev">${I.back}</button><h2>${calTitle()}</h2><button class="btn ghost icon" data-act="calNext">${I.chev}</button><button class="btn ghost" data-act="calToday">Today</button><span class="sp"></span>
-    <div class="seg views">${[["month", "Month"], ["week", "Week"], ["day", "Day"], ["year", "Year"]].map(([v, t]) => `<button class="${CAL.view === v ? "on" : ""}" data-view="${v}">${t}</button>`).join("")}</div>
+    <div class="seg views">${[["day", "Day"], ["week", "Week"], ["month", "Month"], ["year", "Year"]].map(([v, t]) => `<button class="${CAL.view === v ? "on" : ""}" data-view="${v}">${t}</button>`).join("")}</div>
     <button class="btn ghost icon" data-act="ics" title="Download .ics">${I.down}</button><button class="btn primary" data-act="newEvent" style="display:none" id="newEvDesk">${I.plus}Event</button></div>`;
   o += `<div class="presets">${ps.map(pchip).join("")}<button class="btn ghost" data-act="managePresets">${I.edit} Presets</button></div>`;
   if (armed) o += `<div class="armed-note">${I.cal} Tap days to add <b>&nbsp;${esc(armed.name)}&nbsp;</b> · ${fmtTime(armed.start)} – ${fmtTime(armed.end)}<span class="sp"></span><button class="btn ghost" data-act="repeatPreset" style="padding:4px 10px">Repeat weekly…</button><button class="btn ghost" data-act="disarm" style="padding:4px 10px">Done</button></div>`;
