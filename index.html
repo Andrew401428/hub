@@ -143,6 +143,20 @@ section{margin-bottom:26px}
 .hero .greet{font-size:22px;font-weight:800;letter-spacing:-.02em}
 @media (max-width:640px){.hero .greet{font-size:19px}.hero .ring{width:72px;height:72px}}
 .hero .date{opacity:.85;font-size:13.5px;margin-top:3px}
+.hero .wsum{margin-top:8px;font-size:13px;opacity:.92;display:flex;flex-wrap:wrap;gap:4px 10px}.hero .wsum b{font-weight:700}
+.focus{margin-bottom:18px}.focus .fh{display:flex;align-items:center;gap:8px;margin-bottom:6px}.focus .fh .lbl{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.fslot{display:flex;align-items:center;gap:10px;padding:8px 6px;border-bottom:1px solid var(--line);border-radius:10px;transition:background .2s}.fslot:last-child{border-bottom:0}
+.fslot .ft{flex:1;min-width:0;font-weight:500}.fslot .ft small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.fslot.done .ft{color:var(--muted);text-decoration:line-through}
+.fslot.empty{cursor:pointer;color:var(--muted);border:1.5px dashed var(--line2);border-radius:12px;margin:4px 0;justify-content:center;padding:10px}.fslot.empty:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.fslot .x{opacity:0;border:0;background:none;color:var(--muted);padding:4px;border-radius:8px;cursor:pointer;display:flex}.fslot:hover .x{opacity:1}@media (hover:none){.fslot .x{opacity:.6}}
+.pickrow{display:flex;align-items:center;gap:10px;padding:9px 8px;border-radius:10px;cursor:pointer}.pickrow:hover{background:var(--accent-soft)}.pickrow small{color:var(--muted);margin-left:auto;white-space:nowrap}
+.pickh{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:12px 0 4px}
+.picklist{max-height:50vh;overflow:auto;margin-top:6px}
+.paybar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px;font-size:13px;color:var(--muted)}.paybar b{color:var(--text)}
+.review{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px}.review td{padding:8px 6px;border-bottom:1px solid var(--line)}.review td:nth-child(2),.review td:nth-child(3){text-align:right;font-variant-numeric:tabular-nums}.review td:nth-child(3){color:var(--muted)}.review .up{color:var(--ok);font-weight:700}.review .dn{color:var(--bad);font-weight:700}
+.review th{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:right;padding:4px 6px}.review th:first-child{text-align:left}
+.wdays{display:flex;gap:6px;margin:4px 0 8px}.wdays button{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--line2);background:var(--card);cursor:pointer;font-weight:600}.wdays button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .hero .stat{display:flex;gap:18px;margin-top:12px;font-size:12.5px}
 .hero .stat b{display:block;font-size:17px}
 .hero .ring{position:relative;z-index:1;--lc:#fff}.hero .ring .bg{stroke:rgba(255,255,255,.28)}.hero .ring text{fill:#fff}
@@ -747,7 +761,7 @@ function checkReminders() {
     }
   }
 }
-setInterval(checkReminders, 30000);
+setInterval(checkReminders, 30000); setInterval(maybeReviewPrompt, 60000); setTimeout(maybeReviewPrompt, 4000);
 setInterval(() => { const n = $("#view .now"); if (n) { const t = new Date(); n.style.top = ((t.getHours() * 60 + t.getMinutes() - START_H * 60) / 60 * HOUR_PX) + "px"; } }, 60000);
 
 
@@ -888,15 +902,15 @@ V.dash = () => {
   const tot = ls.reduce((a, l) => a + l.items.length, 0), done = ls.reduce((a, l) => a + l.items.filter(i => i.done).length, 0);
   const tod = occurrences(today(), today()), up = occurrences(addDays(today(), 1), addDays(today(), 7)).slice(0, 5);
   const cover = PREF().heroCover && lsGet("bgimg", null);
-  const hero = `<div class="hero${cover ? " cover" : ""}"${cover ? ` style="background-image:url(${cover})"` : ""}>${cover ? '<div class="coverlay"></div>' : ""}<div class="sp" style="min-width:0"><div class="row"><div class="greet">${greet}${name ? ", " + esc(name) : ""} 👋</div><span class="sp"></span><button class="btn ghost icon phone-only" data-go="#settings" style="color:#fff" title="Settings">${I.cog}</button></div><div class="date">${new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</div>
+  const hero = `<div class="hero${cover ? " cover" : ""}"${cover ? ` style="background-image:url(${cover})"` : ""}>${cover ? '<div class="coverlay"></div>' : ""}<div class="sp" style="min-width:0"><div class="row"><div class="greet">${greet}${name ? ", " + esc(name) : ""} 👋</div><span class="sp"></span><button class="btn ghost icon phone-only" data-go="#settings" style="color:#fff" title="Settings">${I.cog}</button></div><div class="date">${new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</div>${weekSummary()}
     <div class="stat"><div><b>${tod.length}</b>today</div><div><b>${tot - done}</b>open tasks</div><div><b>${w.length - wd}</b>to buy</div></div></div>${ring(done, tot, 84, "lg")}</div>`;
   const w0 = weekStart(today()), wdays = [...Array(7)].map((_, i) => addDays(w0, i)), wocc = occurrences(w0, addDays(w0, 6));
-  const weekHead = `<div class="sec-h"><h2>This week</h2><span class="n">${fmtDate(w0, { month: "short", day: "numeric" })} – ${fmtDate(addDays(w0, 6), { month: "short", day: "numeric" })} · ${wocc.length} event${wocc.length === 1 ? "" : "s"}</span><span class="sp"></span><button class="btn ghost" data-go="#cal">Calendar ${I.chev}</button></div>`;
+  const weekHead = `<div class="sec-h"><h2>This week</h2><span class="n">${fmtDate(w0, { month: "short", day: "numeric" })} – ${fmtDate(addDays(w0, 6), { month: "short", day: "numeric" })} · ${wocc.length} event${wocc.length === 1 ? "" : "s"}</span><span class="sp"></span><button class="btn ghost" data-act="review" title="Weekly review">Review</button><button class="btn ghost" data-go="#cal">Calendar ${I.chev}</button></div>`;
   const todayCard = phone
     ? `<section>${weekHead}<div class="card agenda" style="padding:6px 12px 12px">${wdays.map(dd => { const xs = wocc.filter(x => x.date === dd); if (!xs.length && dd !== today()) return ""; return `<div class="dh${dd === today() ? " today" : ""}">${dd === today() ? "Today" : fmtDate(dd, { weekday: "long", day: "numeric" })}</div>${xs.map(({ ev, date }) => evRow(ev, date, true)).join("") || `<div class="muted small" style="padding:4px 8px">Nothing today.</div>`}`; }).join("") || `<div class="empty" style="padding:18px">Nothing this week.</div>`}</div></section>`
     : `<section>${weekHead}<div class="wk">${wdays.map(dd => { const xs = wocc.filter(x => x.date === dd); return `<div class="wkd${dd === today() ? " today" : ""}${dd < today() ? " past" : ""}" data-day="${dd}"><div class="h">${fmtDate(dd, { weekday: "short" })}<b>${parseYmd(dd).getDate()}</b></div>${xs.map(({ ev }) => `<div class="wke" data-ev="${ev.id}" style="--ec:${evColor(ev)}"><b>${esc(ev.title)}</b><span>${ev.start ? fmtTime(ev.start) + (ev.end ? " – " + fmtTime(ev.end) : "") : "All day"}</span></div>`).join("") || '<div class="none">Free</div>'}</div>`; }).join("")}</div></section>`;
   if (!phone) {
-    let o = `<div class="dash-cols"><div class="col">${trainingCard()}</div><div class="mid">${hero}${todayCard}</div><div class="col">${goalsCard(8)}</div></div>`;
+    let o = `<div class="dash-cols"><div class="col">${trainingCard()}</div><div class="mid">${hero}${focusCard()}${todayCard}</div><div class="col">${goalsCard(8)}</div></div>`;
     o += `<div class="dash-cols"><div class="col"></div><section class="mid"><div class="sec-h"><h2>Lists</h2><span class="n">${done}/${tot} done</span><span class="sp"></span><button class="btn ghost" data-go="#lists">All lists ${I.chev}</button></div><div class="grid">${ls.map(listCard).join("")}`;
     const due = w.filter(i => !i.done && i.by).slice(0, 3);
     o += `<div class="card sq" style="--lc:#f59e0b;--i:${ls.length}" data-go="#wish"><div class="emoji">🛍️</div><h3>Wishlist</h3><div class="mini">${due.map(i => `<div>${esc(i.name)} · ${relDay(i.by)}</div>`).join("") || (w.length ? `<div>${w.length - wd} to buy</div>` : '<span class="chip grey">Empty</span>')}</div><div class="foot"><span><b>${wd}</b>/${w.length}</span>${ring(wd, w.length, 54)}</div></div>`;
@@ -904,7 +918,7 @@ V.dash = () => {
     return o;
   }
   const nextDue = w.filter(i => !i.done && i.by)[0], nextEv = up[0];
-  return hero + `<section><div class="tiles">${trainingCard()}${goalsCard()}</div></section>` + todayCard + `<section><div class="sec-h"><h2>Sections</h2></div><div class="tiles">
+  return hero + focusCard() + `<section><div class="tiles">${trainingCard()}${goalsCard()}</div></section>` + todayCard + `<section><div class="sec-h"><h2>Sections</h2></div><div class="tiles">
     <div class="card tile" data-go="#lists"><div class="ti">${I.list}</div><div class="tt"><b>Lists</b><span>${ls.length} lists · ${tot - done} open</span></div>${I.chev.replace('class="ic"', 'class="ic chev"')}</div>
     <div class="card tile" data-go="#wish"><div class="ti">${I.cart}</div><div class="tt"><b>Wishlist</b><span>${w.length - wd} to buy${nextDue ? " · " + esc(nextDue.name) + " " + relDay(nextDue.by) : ""}</span></div>${I.chev.replace('class="ic"', 'class="ic chev"')}</div>
     <div class="card tile" data-go="#cal"><div class="ti">${I.cal}</div><div class="tt"><b>Calendar</b><span>${nextEv ? esc(nextEv.ev.title) + " · " + fmtDate(nextEv.date, { weekday: "short" }) + " " + fmtTime(nextEv.ev.start) : "nothing in the next week"}</span></div>${I.chev.replace('class="ic"', 'class="ic chev"')}</div>
@@ -964,6 +978,65 @@ function ensurePresets() {
   const ps = presets(); if (ps.some(p => !p.color)) { const pool = COLORS.slice(0, 9).sort(() => Math.random() - .5); put("settings:presets", { items: ps.map((p, i) => p.color ? p : { ...p, color: pool[i % pool.length] }) }, { quiet: true }); }
 }
 const weekStart = d => addDays(d, -parseYmd(d).getDay());
+const evHours = ev => ev.start && ev.end ? Math.max(0, (minutes(ev.end) - minutes(ev.start)) / 60) : 0;
+function evRate(ev) { if (Number(ev.rate)) return Number(ev.rate); const ps = presets().filter(p => Number(p.rate)); const byName = ps.find(p => p.name === ev.title), byLoc = ev.loc && ps.find(p => p.loc === ev.loc), rates = [...new Set(ps.map(p => Number(p.rate)))]; return Number((byName || byLoc)?.rate) || (rates.length === 1 ? rates[0] : 0); }
+function workStats(from, to) { let hours = 0, pay = 0, shifts = 0; for (const { ev } of occurrences(from, to)) { if (ev.cat !== "work") continue; const h = evHours(ev); shifts++; hours += h; pay += h * evRate(ev); } return { hours, pay, shifts }; }
+const fmtH = h => (Math.round(h * 10) / 10).toLocaleString(undefined, { maximumFractionDigits: 1 });
+const payChips = ({ hours, pay, shifts }, label) => shifts ? `<div class="paybar"><span>${label}:</span><span><b>${shifts}</b> shift${shifts === 1 ? "" : "s"}</span><span>·</span><span><b>${fmtH(hours)}</b> h</span>${pay ? `<span>·</span><span>~<b>${money(pay)}</b></span>` : `<span class="small">· add a pay rate to the presets to see earnings</span>`}</div>` : "";
+function weekSummary() {
+  const w0 = weekStart(today()), w1 = addDays(w0, 6), ws = workStats(w0, w1), parts = [];
+  const other = occurrences(w0, w1).filter(x => x.ev.cat !== "work").length, steps = occurrences(w0, w1).filter(x => x.ev.stepRef).length;
+  const due = goals().filter(g => !g.done && g.due && g.due >= w0 && g.due <= w1).length;
+  if (ws.shifts) parts.push(`<span><b>${fmtH(ws.hours)} h</b> of shifts${ws.pay ? ` (~${money(ws.pay)})` : ""}</span>`);
+  if (other) parts.push(`<span><b>${other}</b> other event${other === 1 ? "" : "s"}</span>`);
+  if (steps) parts.push(`<span><b>${steps}</b> goal step${steps === 1 ? "" : "s"} scheduled</span>`);
+  if (due) parts.push(`<span><b>${due}</b> goal${due === 1 ? "" : "s"} due</span>`);
+  return `<div class="wsum">${parts.join("") || "<span>A quiet week so far.</span>"}</div>`;
+}
+/* ---------- today's focus ---------- */
+const focusId = () => "focus:" + today();
+const focusPicks = () => (get(focusId()) || { picks: [] }).picks;
+function focusResolve(pk) {
+  if (pk.kind === "step") { const g = get(pk.goal); const x = g && findSub(g, pk.sub)?.x; return x ? { text: x.text, src: g.title, done: subDone(x) } : null; }
+  if (pk.kind === "item") { const l = get(pk.list); const it = l && l.items.find(i => i.id === pk.item); return it ? { text: it.text, src: l.title, done: !!it.done } : null; }
+  return null;
+}
+function focusCard() {
+  const picks = focusPicks(), slots = [];
+  picks.forEach((pk, i) => { const r = focusResolve(pk); if (!r) return; slots.push(`<div class="fslot${r.done ? " done" : ""}" data-fi="${i}"><button class="chk" role="checkbox" aria-checked="${r.done}" data-act="focusTick">${I.check}</button><div class="ft">${esc(r.text)}<small>${esc(r.src)}</small></div><button class="x" data-act="focusDel" title="Remove">${I.x}</button></div>`); });
+  for (let i = slots.length; i < 3; i++) slots.push(`<div class="fslot empty" data-act="focusPick">${I.plus} ${i === 0 ? "Pick today's first thing" : "Pick another"}</div>`);
+  const dn = picks.map(focusResolve).filter(Boolean), nd = dn.filter(x => x.done).length;
+  return `<section class="focus"><div class="fh"><span class="lbl">Today's focus</span><span class="small muted">${dn.length ? `${nd}/${dn.length} done` : "three things, cleared at midnight"}</span><span class="sp"></span>${dn.length ? `<button class="btn ghost" data-act="focusPick" style="padding:4px 8px">${I.plus}</button>` : ""}</div><div class="card" style="padding:6px 10px">${slots.join("")}</div></section>`;
+}
+function focusPicker() {
+  const picks = focusPicks(), has = pk => picks.some(q => JSON.stringify(q) === JSON.stringify(pk));
+  const rows = [];
+  for (const g of goals().filter(g => !g.done)) { const leaves = subLeaves(g).filter(x => !x.done); if (!leaves.length) continue; rows.push(`<div class="pickh">${esc(g.emoji || "🎯")} ${esc(g.title)}</div>`); leaves.forEach(x => { const pk = { kind: "step", goal: g.id, sub: x.id }; if (!has(pk)) rows.push(`<div class="pickrow" data-pick='${esc(JSON.stringify(pk))}'>${I.target}<span>${esc(x.text)}</span><small>step</small></div>`); }); }
+  for (const l of lists()) { const open = l.items.filter(i => !i.done); if (!open.length) continue; rows.push(`<div class="pickh">${esc(l.emoji || "📝")} ${esc(l.title)}</div>`); open.slice(0, 30).forEach(it => { const pk = { kind: "item", list: l.id, item: it.id }; if (!has(pk)) rows.push(`<div class="pickrow" data-pick='${esc(JSON.stringify(pk))}'>${I.list}<span>${esc(it.text)}</span><small>list</small></div>`); }); }
+  const b = sheet(`<h3>Pick a focus</h3><input class="in" id="pickQ" placeholder="Filter…" autocomplete="off" style="margin-top:8px"><div class="picklist">${rows.join("") || '<div class="muted small" style="padding:10px">Nothing open in goals or lists.</div>'}</div>`);
+  $("#pickQ", b).addEventListener("input", e => { const q = e.target.value.toLowerCase(); $$(".pickrow", b).forEach(r => r.style.display = r.textContent.toLowerCase().includes(q) ? "" : "none"); });
+  b.addEventListener("click", e => { const r = e.target.closest("[data-pick]"); if (!r) return; const pk = JSON.parse(r.dataset.pick), cur = focusPicks(); if (cur.length >= 3) { toast("Three is the limit, finish one first"); return; } put(focusId(), { picks: cur.concat([pk]) }, { quiet: true }); b.close(); render(); });
+}
+/* ---------- weekly review ---------- */
+function reviewSheet() {
+  const w0 = weekStart(today()), p0 = addDays(w0, -7), inWk = (ts, a) => ts && ymd(new Date(ts)) >= a && ymd(new Date(ts)) < addDays(a, 7);
+  const row = (label, f) => { const a = f(w0), b = f(p0); return { label, a, b }; };
+  const stepsDone = a => goals().reduce((k, g) => k + subLeaves(g).filter(x => inWk(x.doneAt, a)).length, 0);
+  const itemsDone = a => lists().reduce((k, l) => k + l.items.filter(i => inWk(i.doneAt, a)).length, 0);
+  const goalsHit = a => goals().filter(g => inWk(g.doneAt, a)).length;
+  const progress = a => goals().reduce((k, g) => k + Object.entries(g.log || {}).filter(([d]) => d >= a && d < addDays(a, 7)).reduce((x, [, v]) => x + (Number(v) || 0), 0), 0);
+  const bought = a => wishItems().filter(i => inWk(i.doneAt, a)).length;
+  const rows = [row("Goal steps done", stepsDone), row("List items ticked", itemsDone), row("Goals reached", goalsHit), row("Progress logged", progress), row("Wishlist bought", bought), row("Shift hours", a => Math.round(workStats(a, addDays(a, 6)).hours * 10) / 10)];
+  const pay = workStats(w0, addDays(w0, 6)).pay, payP = workStats(p0, addDays(p0, 6)).pay; if (pay || payP) rows.push({ label: "Earned (est.)", a: Math.round(pay), b: Math.round(payP), money: true });
+  const score = rows.slice(0, 5).reduce((k, r) => k + r.a, 0), scoreP = rows.slice(0, 5).reduce((k, r) => k + r.b, 0);
+  const b = sheet(`<h3>Weekly review</h3><p class="small muted" style="margin:4px 0 0">${fmtDate(w0, { month: "short", day: "numeric" })} – ${fmtDate(addDays(w0, 6), { month: "short", day: "numeric" })} vs the week before</p>
+    <table class="review"><tr><th></th><th>This week</th><th>Last week</th><th></th></tr>${rows.map(r => `<tr><td>${r.label}</td><td>${r.money ? money(r.a) : r.a}</td><td>${r.money ? money(r.b) : r.b}</td><td class="${r.a > r.b ? "up" : r.a < r.b ? "dn" : ""}">${r.a > r.b ? "▲" : r.a < r.b ? "▼" : "–"}</td></tr>`).join("")}</table>
+    <p style="margin:14px 0 0;font-weight:600">${score > scoreP ? "🎉 Better than last week. Keep the streak." : score === scoreP ? "Same pace as last week." : "A slower week. Pick three things for tomorrow and go again."}</p>
+    <div class="row" style="margin-top:14px"><span class="sp"></span><button class="btn primary" data-act="close">Done</button></div>`);
+  lsSet("reviewed", w0);
+  if (score > scoreP && score > 0) setTimeout(() => { const r = $("h3", b).getBoundingClientRect(); confetti(r.left + 60, r.top + 10); }, 350);
+}
+function maybeReviewPrompt() { const d = new Date(); if (d.getDay() !== 0 || d.getHours() < 17) return; if (lsGet("reviewed", "") === weekStart(today())) return; if (lsGet("reviewNag", "") === today()) return; lsSet("reviewNag", today()); toast("Your weekly review is ready", 9000, { label: "Open", fn: reviewSheet }); }
 const minutes = t => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
 function calTitle() {
   const a = parseYmd(CAL.anchor);
@@ -981,7 +1054,7 @@ function calMove(n) {
 function setView(v, anchor) { CAL.view = v; lsSet("calview", v); if (anchor) CAL.anchor = anchor; CAL.dir = ""; render(); }
 function addPreset(p, date) {
   const id = "event:" + uid();
-  put(id, { title: p.name, date, start: p.start, end: p.end, loc: p.loc || "", note: "", remind: p.remind ?? 30, repeat: "none", until: "", cat: p.cat || "work", color: p.color || randColor(), created: Date.now() });
+  put(id, { title: p.name, date, start: p.start, end: p.end, loc: p.loc || "", note: "", remind: p.remind ?? 30, repeat: "none", until: "", cat: p.cat || "work", color: p.color || randColor(), rate: p.rate || 0, created: Date.now() });
   toast(`${p.name} · ${fmtDate(date)}`, 5000, { label: "Undo", fn: () => del(id) });
 }
 function monthView() {
@@ -1031,7 +1104,8 @@ V.cal = () => {
     <div class="seg views">${[["month", "Month"], ["week", "Week"], ["day", "Day"], ["year", "Year"]].map(([v, t]) => `<button class="${CAL.view === v ? "on" : ""}" data-view="${v}">${t}</button>`).join("")}</div>
     <button class="btn ghost icon" data-act="ics" title="Download .ics">${I.down}</button><button class="btn primary" data-act="newEvent" style="display:none" id="newEvDesk">${I.plus}Event</button></div>`;
   o += `<div class="presets">${ps.map(pchip).join("")}<button class="btn ghost" data-act="managePresets">${I.edit} Presets</button></div>`;
-  if (armed) o += `<div class="armed-note">${I.cal} Tap days to add <b>&nbsp;${esc(armed.name)}&nbsp;</b> · ${fmtTime(armed.start)} – ${fmtTime(armed.end)}<span class="sp"></span><button class="btn ghost" data-act="disarm" style="padding:4px 10px">Done</button></div>`;
+  if (armed) o += `<div class="armed-note">${I.cal} Tap days to add <b>&nbsp;${esc(armed.name)}&nbsp;</b> · ${fmtTime(armed.start)} – ${fmtTime(armed.end)}<span class="sp"></span><button class="btn ghost" data-act="repeatPreset" style="padding:4px 10px">Repeat weekly…</button><button class="btn ghost" data-act="disarm" style="padding:4px 10px">Done</button></div>`;
+  { const a = parseYmd(CAL.anchor); let from, to, label; if (CAL.view === "month") { from = ymd(new Date(a.getFullYear(), a.getMonth(), 1)); to = ymd(new Date(a.getFullYear(), a.getMonth() + 1, 0)); label = a.toLocaleDateString(undefined, { month: "long" }); } else if (CAL.view === "year") { from = `${a.getFullYear()}-01-01`; to = `${a.getFullYear()}-12-31`; label = String(a.getFullYear()); } else if (CAL.view === "week") { from = weekStart(CAL.anchor); to = addDays(from, 6); label = "This week"; } else { from = to = CAL.anchor; label = "This day"; } o += payChips(workStats(from, to), label); }
   const view = CAL.view === "month" ? monthView() : CAL.view === "week" ? timeGrid([...Array(7)].map((_, i) => addDays(weekStart(CAL.anchor), i))) : CAL.view === "day" ? timeGrid([CAL.anchor]) : yearView();
   o += `<div class="cal-layout"><div class="cal-main"><div class="cal-wrap"><div class="calview ${CAL.dir}">${view}</div></div>`;
   CAL.dir = "";
@@ -1055,6 +1129,26 @@ function calDayClick(e, el) {
   if (CAL.view === "year") { setView("day", d); return; }
   dayModal(d);
 }
+function repeatSheet(p) {
+  const w0 = weekStart(today()), def = addDays(today(), 56), names = ["S", "M", "T", "W", "T", "F", "S"];
+  const b = sheet(`<h3>Repeat ${esc(p.name)} weekly</h3><p class="small muted" style="margin:4px 0 10px">${fmtTime(p.start)} – ${fmtTime(p.end)}${p.loc ? " · " + esc(p.loc) : ""}. Pick the weekdays, then how long it runs. Each weekday becomes one repeating event you can still edit or delete.</p>
+    <label class="field">Days</label><div class="wdays">${names.map((nm, i) => `<button type="button" data-wd="${i}">${nm}</button>`).join("")}</div>
+    <div class="two"><div><label class="field">From</label><input class="in" type="date" name="from" value="${today()}"></div><div><label class="field">Until</label><input class="in" type="date" name="until" value="${def}"></div></div>
+    <p class="small muted" id="rpSum" style="margin:10px 0 0">Pick at least one day.</p>
+    <div class="row" style="margin-top:14px"><span class="sp"></span><button class="btn ghost" data-act="close">Cancel</button><button class="btn primary" data-act="rpSave">Add shifts</button></div>`);
+  const chosen = new Set();
+  const sum = () => { const from = $("[name=from]", b).value, until = $("[name=until]", b).value; let k = 0; if (from && until && until >= from) for (let d = from; d <= until; d = addDays(d, 1)) if (chosen.has(parseYmd(d).getDay())) k++; $("#rpSum", b).textContent = chosen.size ? `Creates ${k} shift${k === 1 ? "" : "s"} (${[...chosen].sort().map(i => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][i]).join(", ")}).` : "Pick at least one day."; };
+  b.addEventListener("input", sum);
+  b.addEventListener("click", e => {
+    const wd = e.target.closest("[data-wd]"); if (wd) { const i = +wd.dataset.wd; chosen.has(i) ? chosen.delete(i) : chosen.add(i); wd.classList.toggle("on", chosen.has(i)); sum(); return; }
+    if (e.target.closest("[data-act=rpSave]")) {
+      const from = $("[name=from]", b).value, until = $("[name=until]", b).value; if (!chosen.size) return toast("Pick at least one day"); if (!from || !until || until < from) return toast("Check the dates");
+      const ids = [];
+      for (const i of chosen) { let d = from; while (parseYmd(d).getDay() !== i) d = addDays(d, 1); if (d > until) continue; const id = "event:" + uid(); ids.push(id); put(id, { title: p.name, date: d, start: p.start, end: p.end, loc: p.loc || "", note: "", remind: p.remind ?? 30, repeat: "weekly", until, cat: p.cat || "work", color: p.color || randColor(), rate: p.rate || 0, created: Date.now() }, { quiet: true }); }
+      b.close(); CAL.armed = null; render(); toast(`${ids.length} repeating shift${ids.length === 1 ? "" : "s"} added`, 7000, { label: "Undo", fn: () => { ids.forEach(id => del(id, { quiet: true })); render(); } });
+    }
+  });
+}
 function presetsSheet() {
   const ps = presets();
   const b = sheet(`<h3>Shift presets</h3><p class="small muted" style="margin:0 0 8px">Tap one on the calendar, then tap the days you work.</p><div>${ps.map(p => `<div class="prow" data-p="${p.id}"><span class="cdot" style="background:${p.color || "var(--accent)"}"></span><div class="sp"><b>${esc(p.name)}</b><div class="small muted">${fmtTime(p.start)} – ${fmtTime(p.end)}${p.loc ? " · " + esc(p.loc) : ""} · ${p.cat === "work" ? "work" : "other"} · ${remindLabel(p.remind ?? 30)}</div></div><button class="btn ghost icon" data-act="pedit">${I.edit}</button><button class="btn ghost icon danger" data-act="pdel">${I.x}</button></div>`).join("") || '<div class="muted small">No presets yet.</div>'}</div>
@@ -1072,6 +1166,7 @@ function presetForm(p = {}) {
     <label class="field">Name</label><input class="in" name="name" value="${esc(v.name)}" placeholder="Open CI">
     <div class="two"><div><label class="field">Start</label><input class="in" type="time" name="start" value="${v.start}"></div><div><label class="field">End</label><input class="in" type="time" name="end" value="${v.end}"></div></div>
     <div class="two"><div><label class="field">Location</label><input class="in" name="loc" value="${esc(v.loc)}"></div><div><label class="field">Type</label><select name="cat"><option value="work"${v.cat === "work" ? " selected" : ""}>Work</option><option value="other"${v.cat === "other" ? " selected" : ""}>Other</option></select></div></div>
+    <label class="field">Pay rate ($ per hour, optional — shows earnings on the calendar and Home)</label><input class="in" type="number" step="0.01" name="rate" value="${v.rate || ""}" placeholder="e.g. 15.50">
     <label class="field">Remind me</label><select name="remind">${[[-1, "No reminder"], [0, "At start"], [10, "10 min before"], [30, "30 min before"], [60, "1 hour before"], [120, "2 hours before"], [1440, "1 day before"]].map(([m, t]) => `<option value="${m}"${v.remind == m ? " selected" : ""}>${t}</option>`).join("")}</select>
     <label class="field">Color</label>${swatchRow(v.color)}
     <div class="row" style="margin-top:16px"><span class="sp"></span><button class="btn ghost" data-act="back">Cancel</button><button class="btn primary" data-act="save">Save</button></div>`);
@@ -1080,7 +1175,7 @@ function presetForm(p = {}) {
     const act = e.target.closest("[data-act]")?.dataset.act;
     if (act === "back") { b.remove(); presetsSheet(); }
     if (act === "save") {
-      const f = {}; $$("[name]", b).forEach(i => f[i.name] = i.value.trim()); if (!f.name) return toast("Give it a name"); f.remind = Number(f.remind);
+      const f = {}; $$("[name]", b).forEach(i => f[i.name] = i.value.trim()); if (!f.name) return toast("Give it a name"); f.remind = Number(f.remind); f.rate = Number(f.rate) || 0;
       const items = presets().slice(), np = { ...v, ...f, id: p.id || uid() }; const i = items.findIndex(x => x.id === np.id); if (i >= 0) items[i] = np; else items.push(np);
       put("settings:presets", { items }); b.remove(); presetsSheet();
     }
@@ -1096,7 +1191,7 @@ function eventForm(ev = {}, date) {
     <label class="field">Title</label><input class="in" name="title" value="${esc(v.title)}" placeholder="Work shift, dentist, …">
     <div class="two"><div><label class="field">Date</label><input class="in" type="date" name="date" value="${v.date}"></div><div><label class="field">Type</label><div class="seg" data-seg="cat"><button type="button" data-v="other" class="${v.cat === "other" ? "on" : ""}">Other</button><button type="button" data-v="work" class="${v.cat === "work" ? "on" : ""}">Work</button></div><input type="hidden" name="cat" value="${v.cat}"></div></div>
     <div class="two"><div><label class="field">Start</label><input class="in" type="time" name="start" value="${v.start}"></div><div><label class="field">End</label><input class="in" type="time" name="end" value="${v.end}"></div></div>
-    <label class="field">Location</label><input class="in" name="loc" value="${esc(v.loc)}" placeholder="optional">
+    <div class="two"><div><label class="field">Location</label><input class="in" name="loc" value="${esc(v.loc)}" placeholder="optional"></div><div><label class="field">Pay rate ($/h, work)</label><input class="in" type="number" step="0.01" name="rate" value="${v.rate || ""}" placeholder="from preset"></div></div>
     <div class="two"><div><label class="field">Remind me</label><select name="remind">${[[-1, "No reminder"], [0, "At start"], [10, "10 min before"], [30, "30 min before"], [60, "1 hour before"], [120, "2 hours before"], [1440, "1 day before"]].map(([m, t]) => `<option value="${m}"${v.remind == m ? " selected" : ""}>${t}</option>`).join("")}</select></div>
     <div><label class="field">Repeat</label><select name="repeat">${["none", "daily", "weekly", "biweekly", "monthly"].map(r => `<option value="${r}"${v.repeat === r ? " selected" : ""}>${r[0].toUpperCase() + r.slice(1)}</option>`).join("")}</select></div></div>
     <div id="untilWrap" style="display:${v.repeat !== "none" ? "block" : "none"}"><label class="field">Repeat until (optional)</label><input class="in" type="date" name="until" value="${v.until}"></div>
@@ -1104,7 +1199,7 @@ function eventForm(ev = {}, date) {
     <label class="field">Notes</label><textarea name="note" rows="2">${esc(v.note)}</textarea>
     <div class="row" style="margin-top:16px">${ev.id ? `<button class="btn ghost danger" data-act="delEvent">Delete</button><a class="btn ghost" href="${gcalLink(v)}" target="_blank" rel="noopener">${I.ext} Google Calendar</a>` : ""}<span class="sp"></span><button class="btn ghost" data-act="close">Cancel</button><button class="btn primary" data-act="saveEvent">Save</button></div>`);
   $("[name=repeat]", b).onchange = e => $("#untilWrap", b).style.display = e.target.value === "none" ? "none" : "block";
-  const psel = $("[name=_preset]", b); if (psel) psel.onchange = () => { const p = ps.find(x => x.id === psel.value); if (!p) return; $("[name=title]", b).value = p.name; $("[name=start]", b).value = p.start; $("[name=end]", b).value = p.end; $("[name=loc]", b).value = p.loc || ""; $("[name=remind]", b).value = p.remind ?? 30; $("[name=cat]", b).value = p.cat || "work"; $$("[data-seg] button", b).forEach(x => x.classList.toggle("on", x.dataset.v === (p.cat || "work"))); if (p.color) { $("[name=color]", b).value = p.color; $$("[data-swatch] .sw", b).forEach(x => x.classList.toggle("on", x.dataset.c === p.color)); } };
+  const psel = $("[name=_preset]", b); if (psel) psel.onchange = () => { const p = ps.find(x => x.id === psel.value); if (!p) return; $("[name=title]", b).value = p.name; $("[name=start]", b).value = p.start; $("[name=end]", b).value = p.end; $("[name=loc]", b).value = p.loc || ""; $("[name=remind]", b).value = p.remind ?? 30; $("[name=cat]", b).value = p.cat || "work"; $("[name=rate]", b).value = p.rate || ""; $$("[data-seg] button", b).forEach(x => x.classList.toggle("on", x.dataset.v === (p.cat || "work"))); if (p.color) { $("[name=color]", b).value = p.color; $$("[data-swatch] .sw", b).forEach(x => x.classList.toggle("on", x.dataset.c === p.color)); } };
   b.addEventListener("click", async e => {
     const sw = e.target.closest("[data-swatch] .sw"); if (sw) { const wrap = sw.closest("[data-swatch]"); $$(".sw", wrap).forEach(x => x.classList.toggle("on", x === sw)); $(`[name=${wrap.dataset.swatch}]`, b).value = sw.dataset.c; return; }
     const seg = e.target.closest("[data-seg] button"); if (seg) { $$("button", seg.parentNode).forEach(x => x.classList.toggle("on", x === seg)); $("[name=cat]", b).value = seg.dataset.v; return; }
@@ -1113,7 +1208,7 @@ function eventForm(ev = {}, date) {
     if (act === "saveEvent") {
       const f = {}; $$("[name]", b).forEach(i => { if (!i.name.startsWith("_")) f[i.name] = i.value.trim(); });
       if (!f.title) { $("[name=title]", b).focus(); return toast("Give it a title"); }
-      f.remind = Number(f.remind); if (f.repeat === "none") f.until = "";
+      f.remind = Number(f.remind); if (f.repeat === "none") f.until = ""; f.rate = Number(f.rate) || 0;
       put(ev.id || "event:" + uid(), { ...ev, ...f, created: ev.created || Date.now() }); b.close(); toast(ev.id ? "Saved" : "Event added");
     }
   });
@@ -1310,6 +1405,18 @@ document.addEventListener("click", async e => {
   const dh = e.target.closest("[data-dayhead]"); if (dh) { setView("day", dh.dataset.dayhead); return; }
   const ymt = e.target.closest("[data-ym]"); if (ymt) { setView("month", ymt.dataset.ym + "-01"); return; }
   if (act === "newEvent") { eventForm({}); return; }
+  if (act === "repeatPreset") { const p = presets().find(x => x.id === CAL.armed); if (p) repeatSheet(p); return; }
+  if (act === "review") { reviewSheet(); return; }
+  if (act === "focusPick") { focusPicker(); return; }
+  if (act === "focusDel") { const i = +t.closest("[data-fi]").dataset.fi, picks = focusPicks().slice(); picks.splice(i, 1); put(focusId(), { picks }, { quiet: true }); render(); return; }
+  if (act === "focusTick") {
+    const pk = focusPicks()[+t.closest("[data-fi]").dataset.fi]; if (!pk) return;
+    if (pk.kind === "step") { const g = get(pk.goal), f = g && findSub(g, pk.sub); if (!f) return; const to = !subDone(f.x); if (f.x.kids?.length) f.x.kids.forEach(k => { k.done = to; k.doneAt = to ? Date.now() : null; }); else { f.x.done = to; f.x.doneAt = to ? Date.now() : null; } const { t: tt, d } = subStats(g); if (!g.target && tt && d === tt && !g.done) { g.done = true; g.doneAt = Date.now(); } put(pk.goal, g, { quiet: true }); }
+    else { const l = get(pk.list), it = l && l.items.find(i => i.id === pk.item); if (!it) return; it.done = !it.done; it.doneAt = it.done ? Date.now() : null; put(pk.list, l, { quiet: true }); }
+    const row = t.closest(".fslot"), on = t.getAttribute("aria-checked") !== "true"; row.classList.toggle("done", on); t.setAttribute("aria-checked", on);
+    if (on && focusPicks().map(focusResolve).filter(Boolean).every(x => x.done)) { const r = t.getBoundingClientRect(); confetti(r.left + 10, r.top + 10); toast("🎯 Focus done for today"); }
+    const hd = $(".focus .fh .small"); if (hd) { const dn = focusPicks().map(focusResolve).filter(Boolean); hd.textContent = `${dn.filter(x => x.done).length}/${dn.length} done`; } return;
+  }
   if (act === "ics") { icsAll(); return; }
   if (act === "connect") { const cfg = { url: $("#sUrl").value.trim(), key: $("#sKey").value.trim(), secret: $("#sSecret").value.trim() }; cfg.url = cfg.url.replace(/\/+$/, "").replace(/\/docs$/, ""); if (cfg.url && !/^https?:\/\//.test(cfg.url)) cfg.url = "https://" + cfg.url; if (!cfg.url || !cfg.secret || (isSupa(cfg) && !cfg.key)) return toast(isSupa(cfg) ? "Supabase needs the URL, anon key and secret" : "Fill in the server address and secret word"); connect(cfg).then(ok => { toast(ok ? "Connected ✓" : "Could not connect: " + SYNC.msg, 5000); render(); }); return; }
   if (act === "disconnect") { disconnect(); render(); return; }
