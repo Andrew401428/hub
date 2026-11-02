@@ -291,6 +291,7 @@ section{margin-bottom:26px}
 .settings .card{margin-bottom:14px}
 code{background:var(--bg2);padding:1px 6px;border-radius:6px;font-size:12.5px}
 details summary{cursor:pointer;color:var(--muted);font-size:13px}
+.donesec{margin-top:16px}.donesec>summary{font-size:15px;font-weight:600;padding:8px 2px}.donesec .n{opacity:.7;font-weight:500;margin-left:4px}.donesec .donebody{margin-top:8px;opacity:.75}.donesec .donebody:hover{opacity:1}
 kbd{font:11px Inter;border:1px solid var(--line2);border-bottom-width:2px;border-radius:5px;padding:1px 5px;color:var(--muted)}
 
 /* calendar views */
@@ -506,8 +507,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <div id="toasts"></div>
 <script>
 {
-const APP_VERSION = "0.10.4";
+const APP_VERSION = "0.10.5";
 const CHANGELOG = [
+  "0.10.5 Completed sections: Lists and Goals get a fold-out Completed area at the bottom. Move a list there with ✓ Move to Completed, a goal goes there when marked done; Restore / Reopen brings it back",
   "0.10.4 calendar view buttons ordered shortest to longest: Day, Week, Month, Year",
   "0.10.3 dragging fixes: a fast mouse drag no longer drops the row, pressing a step no longer also moves its goal card, holding the mouse still lifts a row like a long-press on the phone",
   "0.10.2 rename only on the text itself (names and notes now hug their words), press and hold any empty part of a row to move it; fold arrows to open and close a goal's steps and a step's sub-steps (remembered per device)",
@@ -930,11 +932,14 @@ const goalsCard = (max = 3) => { const gs = goals().filter(g => !g.done).slice(0
 function refreshGoal(el, g) { const id = el.dataset.goal; el.outerHTML = goalRow({ ...g, id }, true); const ne = $(`[data-goal="${id}"]`, $("#view")); if (ne) { requestAnimationFrame(() => $$(".gbar i[data-w]", ne).forEach(i => i.style.width = i.dataset.w + "%")); initGoalDrag(); } }
 function initGoalDrag() { $$(".gbig .subs,.gbig .kids", $("#view")).forEach(c => dragInit(c, (from, to, row) => { const id = c.closest("[data-goal]").dataset.goal, g = get(id); if (!g) return; const f = findSub(g, row.dataset.sub); if (!f) return; const [x] = f.arr.splice(from, 1); f.arr.splice(to, 0, x); put(id, g, { quiet: true }); }, ".sub")); dragInit($("#goalRows"), () => reorderGoals($("#goalRows")), ".gbig"); }
 function updateGoalRow(el, g) { $(".gh small", el).innerHTML = goalMeta(g); const i = $(".gbar i", el); i.style.width = goalPct(g) * 100 + "%"; i.classList.toggle("done", !!g.done); $(".gt", el).classList.toggle("muted", !!g.done); const bd = $("[data-act=gdone]", el); if (bd) bd.textContent = g.done ? "Reopen" : "Mark done"; }
+const doneSec = (key, n, inner) => n ? `<details class="donesec" data-fold-key="done:${key}"${FOLDS()["done:" + key] ? " open" : ""}><summary>✓ Completed <span class="n">${n}</span></summary><div class="donebody">${inner}</div></details>` : "";
+document.addEventListener("toggle", e => { const d = e.target; if (!d.matches || !d.matches("details[data-fold-key]")) return; const f = FOLDS(); if (d.open) f[d.dataset.foldKey] = true; else delete f[d.dataset.foldKey]; lsSet("fold", f); }, true);
 const goalsView = () => {
   const gs = goals(), done = gs.filter(g => g.done).length;
   return `${topbar("Goals", `${gs.length - done} active`, ring(done, gs.length, 56))}
   <div class="card"><form class="addrow wishadd" data-act="addGoal" style="margin:0 0 8px"><input class="in" placeholder="New goal, e.g. Climb V6" autocomplete="off"><input class="in" type="number" step="any" placeholder="Target" style="width:auto;max-width:110px"><button class="btn primary">${I.plus}Add</button></form>
-  <div id="goalRows">${gs.map(g => goalRow(g, true)).join("") || emptyBox("list", "No goals yet. Add one above, then tap + each time you make progress.")}</div></div>
+  <div id="goalRows">${gs.filter(g => !g.done).map(g => goalRow(g, true)).join("") || emptyBox("list", "No goals yet. Add one above, then tap + each time you make progress.")}</div></div>
+  ${doneSec("goals", done, gs.filter(g => g.done).map(g => goalRow(g, true)).join(""))}
   <p class="small muted" style="margin-top:10px">A goal with a target counts up (sets, pages, dollars…). A goal without one is just done or not.</p>`;
 };
 function goalForm(g = {}) {
@@ -1011,7 +1016,7 @@ const listCard = (l, i) => { const { t, d } = listStats(l), open = l.items.filte
   <div class="foot"><span><b>${d}</b>/${t}</span>${ring(d, t, 54)}</div></div>`; };
 
 V.dash = () => {
-  const ls = lists(), w = wishItems(), wd = w.filter(i => i.done).length, name = PREF().name, phone = isPhone();
+  const ls = lists().filter(l => !l.completed), w = wishItems(), wd = w.filter(i => i.done).length, name = PREF().name, phone = isPhone();
   const h = new Date().getHours(), greet = h < 5 ? "Still up" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
   const tot = ls.reduce((a, l) => a + l.items.length, 0), done = ls.reduce((a, l) => a + l.items.filter(i => i.done).length, 0);
   const tod = occurrences(today(), today()), up = occurrences(addDays(today(), 1), addDays(today(), 7)).slice(0, 5);
@@ -1045,12 +1050,13 @@ const TILES = {
   glance: () => tile("glance", I.glance, "Glance", "big clock, today, focus and next steps"),
   settings: () => tile("settings", I.cog, "Settings", SYNC.cfg ? SYNC.msg : "not synced"),
 };
-V.lists = () => `${topbar("Lists", `${lists().length} lists`)}<div class="grid">${lists().map(listCard).join("")}<div class="card sq add" style="--i:${lists().length}" data-act="newlist">${I.plus}New list</div></div>`;
+V.lists = () => { const all = lists(), act = all.filter(l => !l.completed), fin = all.filter(l => l.completed);
+  return `${topbar("Lists", `${act.length} lists`)}<div class="grid">${act.map(listCard).join("")}<div class="card sq add" style="--i:${act.length}" data-act="newlist">${I.plus}New list</div></div>${doneSec("lists", fin.length, `<div class="grid">${fin.map(listCard).join("")}</div>`)}`; };
 const itemRow = it => `<div class="item${it.done ? " done" : ""}" data-item="${it.id}"><span class="grip">${I.grip}</span><button class="chk" role="checkbox" aria-checked="${!!it.done}" data-act="tick">${I.check}</button><div class="txt ren" contenteditable="true" spellcheck="false" data-act="text">${esc(it.text)}</div><span class="fill"></span><button class="sb" data-act="inoteadd" title="Note">${I.note}</button><button class="x" data-act="delItem" title="Remove">${I.x}</button>${it.note != null ? `<div class="inote" contenteditable="true" data-act="inote">${esc(it.note)}</div>` : ""}</div>`;
 V.list = id => {
   const l = get("list:" + id); if (!l) return `<div class="empty">List not found. <a href="#dash">Back home</a></div>`;
   const { t, d } = listStats(l);
-  return `<div class="row" style="margin-bottom:10px"><button class="btn ghost" data-go="#dash">${I.back} Home</button><span class="sp"></span><button class="btn ghost" data-act="editList">${I.edit} Style</button><button class="btn ghost" data-act="clearDone">Clear done</button><button class="btn ghost danger" data-act="delList">Delete</button></div>
+  return `<div class="row" style="margin-bottom:10px"><button class="btn ghost" data-go="#dash">${I.back} Home</button><span class="sp"></span><button class="btn ghost" data-act="editList">${I.edit} Style</button><button class="btn ghost" data-act="clearDone">Clear done</button><button class="btn ghost" data-act="completeList">${l.completed ? "↩ Restore" : "✓ Move to Completed"}</button><button class="btn ghost danger" data-act="delList">Delete</button></div>
   <div class="card" style="--lc:${l.color || COLORS[0]}"><div class="list-h"><div class="emoji" data-act="editList">${l.emoji || "📝"}</div><div class="sp" style="min-width:0"><input class="title-in" value="${esc(l.title)}" data-act="title" placeholder="List title"><div class="muted small" id="lstats">${d} of ${t} done</div></div>${ring(d, t, 68, "lg")}</div>
   <div class="items" id="items">${l.items.map(itemRow).join("") || `<div class="empty" id="emptyItems">${emptyBox("list", "Nothing here yet. Add your first item below.")}</div>`}</div>
   <form class="addrow" data-act="addItem"><input class="in" placeholder="Add an item…" autocomplete="off" enterkeyhint="done"><button class="btn primary">${I.plus}Add</button></form></div>
@@ -1514,6 +1520,7 @@ document.addEventListener("click", async e => {
   if (!$("#view").contains(e.target) && !$("#fabWrap").contains(e.target)) return;
   if (act === "newlist") { const id = newList("New list"); location.hash = "#list/" + id.slice(5); setTimeout(() => { const i = $(".title-in"); i?.focus(); i?.select(); }, 60); return; }
   if (act === "editList") { listStyleForm("list:" + arg); return; }
+  if (act === "completeList") { const l = get("list:" + arg); patch("list:" + arg, x => x.completed = !x.completed, { quiet: true }); toast(l.completed ? `“${l.title}” moved back to Lists` : `“${l.title}” moved to Completed`); location.hash = "#lists"; render(); return; }
   if (act === "delList") { const l = get("list:" + arg); if (await ask("Delete list?", `“${l.title}” and its ${l.items.length} items will be removed everywhere.`)) { location.hash = "#dash"; delDoc("list:" + arg, "List deleted", { quiet: true }); } return; }
   if (act === "clearDone") { const rows = $$("#items .item.done"); if (!rows.length) return toast("Nothing to clear"); rows.forEach(r => collapse(r)); patch("list:" + arg, l => l.items = l.items.filter(i => !i.done), { quiet: true }); setTimeout(() => updateListHeader(get("list:" + arg)), 50); return; }
   if (act === "tick") {
@@ -1579,7 +1586,7 @@ document.addEventListener("click", async e => {
     if (act === "gdone") g.done = !g.done;
     else if (act === "gtoday") { if (g.log[td] > 0) delete g.log[td]; else { g.log[td] = 1; const r = t.getBoundingClientRect(); if (streakInfo(g).n % 7 === 0) confetti(r.left + 20, r.top + 10); } }
     else { const st = (act === "ginc" ? 1 : -1) * (Number(g.step) || 1); g.current = Math.max(0, (Number(g.current) || 0) + st); if (g.daily) { g.log[td] = Math.max(0, (g.log[td] || 0) + st); if (!g.log[td]) delete g.log[td]; } if (g.target && g.current >= g.target && !g.done) { g.done = true; const r = t.getBoundingClientRect(); confetti(r.left + 20, r.top + 10); toast("🎯 Goal reached!"); } }
-    g.doneAt = g.done ? Date.now() : null; put(id, g, { quiet: true }); if (el.classList.contains("gbig")) refreshGoal(el, g); else updateGoalRow(el, g); setRing($("#view .topbar .ring"), goals().filter(x => x.done).length, goals().length); const sub = $("#view .topbar .sub"); if (sub) sub.textContent = `${goals().filter(x => !x.done).length} active`; return;
+    g.doneAt = g.done ? Date.now() : null; put(id, g, { quiet: true }); if (el.classList.contains("gbig")) { if (act === "gdone" && route().name === "goals") { render(); toast(g.done ? "Moved to Completed" : "Back in active goals"); return; } refreshGoal(el, g); } else updateGoalRow(el, g); setRing($("#view .topbar .ring"), goals().filter(x => x.done).length, goals().length); const sub = $("#view .topbar .sub"); if (sub) sub.textContent = `${goals().filter(x => !x.done).length} active`; return;
   }
   if (act === "gfold" || act === "sfold") { const el = act === "gfold" ? t.closest("[data-goal]") : t.closest("[data-sub]"), key = act === "gfold" ? el.dataset.goal : "s:" + el.dataset.sub, f = FOLDS(); if (f[key]) delete f[key]; else f[key] = true; lsSet("fold", f); el.classList.toggle("folded", !!f[key]); return; }
   if (act === "gnoteadd") { const el = t.closest("[data-goal]"), g = get(el.dataset.goal); if (!g) return; g.note = ""; put(el.dataset.goal, g, { quiet: true }); refreshGoal(el, g); $(".gnote", $(`[data-goal="${el.dataset.goal}"]`))?.focus(); return; }
