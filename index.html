@@ -507,8 +507,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <div id="toasts"></div>
 <script>
 {
-const APP_VERSION = "0.10.5";
+const APP_VERSION = "0.10.6";
 const CHANGELOG = [
+  "0.10.6 auto-capitalize: the first letter of anything you type, and the first letter after a sentence, is capitalized as you type (not in addresses, secrets or search boxes)",
   "0.10.5 Completed sections: Lists and Goals get a fold-out Completed area at the bottom. Move a list there with ✓ Move to Completed, a goal goes there when marked done; Restore / Reopen brings it back",
   "0.10.4 calendar view buttons ordered shortest to longest: Day, Week, Month, Year",
   "0.10.3 dragging fixes: a fast mouse drag no longer drops the row, pressing a step no longer also moves its goal card, holding the mouse still lifts a row like a long-press on the phone",
@@ -1690,6 +1691,21 @@ $("#view").addEventListener("keydown", e => {
   if (e.key === "Escape" && e.target.dataset.act === "text") e.target.blur();
 });
 $("#view").addEventListener("paste", e => { if (/^(text|gtitle|stext|wname|gnote|snote|inote)$/.test(e.target.dataset?.act || "")) { e.preventDefault(); document.execCommand("insertText", false, (e.clipboardData.getData("text/plain") || "").replace(/\n+/g, " ")); } });
+// Auto-capitalize: the first letter of a text box and the first letter after a sentence end (. ! ? or a new line).
+// Only acts on the letter just typed at the end of the text, so going back to fix a word does not re-capitalize it.
+const NO_CAP = "[type=password],[type=url],[type=email],[type=number],[type=search],[type=date],[type=time],#sUrl,#sSecret,#sKey,#v6Secret,#v6Url,#v6SbUrl,#v6SbKey,#pbStores,#pickQ";
+document.addEventListener("input", e => {
+  const t = e.target; if (e.inputType !== "insertText" || !e.data || !/^[a-z]$/.test(e.data) || !t.matches("input,textarea,[contenteditable]") || t.matches(NO_CAP)) return;
+  const ce = t.hasAttribute("contenteditable"); let node, pos, text;
+  if (ce) { const sel = getSelection(); if (!sel.rangeCount) return; node = sel.anchorNode; if (node.nodeType !== 3) return; pos = sel.anchorOffset; text = node.data; }
+  else { node = t; pos = t.selectionStart; text = t.value; }
+  if (pos < 1 || text[pos - 1] !== e.data || text.slice(pos).trim()) return;
+  const before = text.slice(0, pos - 1);
+  if (!(before.trim() === "" || /[.!?]\s+$/.test(before) || /\n\s*$/.test(before))) return;
+  const out = text.slice(0, pos - 1) + e.data.toUpperCase() + text.slice(pos);
+  if (ce) { node.data = out; const r = document.createRange(); r.setStart(node, pos); r.collapse(true); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); }
+  else { const end = t.selectionEnd; t.value = out; t.setSelectionRange(pos, end); }
+}, true);
 document.addEventListener("keydown", e => {
   if (e.target.matches("input,textarea,[contenteditable]") || e.metaKey || e.ctrlKey || e.altKey) return;
   const map = { 1: "#dash", 2: "#lists", 3: "#goals", 4: "#wish", 5: "#cal", 6: "#settings" };
