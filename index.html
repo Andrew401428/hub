@@ -450,8 +450,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .kids{flex-basis:100%;margin-left:28px;border-left:2px solid var(--line);padding-left:6px}.kids .sub{font-size:13px}.kids .subadd{margin:2px 0 4px}.kids .subadd .in{padding:4px 8px}
 .sub .schip{font-size:11px;font-weight:600;padding:2px 7px;border-radius:999px;background:var(--accent-soft);color:var(--accent);cursor:pointer;white-space:nowrap}
 .sub.done .schip{opacity:.5}
-.sub .sdue{font:inherit;font-size:11px;font-weight:600;padding:1px 6px;border-radius:999px;border:0;background:var(--accent-soft);color:var(--accent);width:auto;max-width:118px;cursor:pointer}
-.sub .sdue.soon{background:#f59e0b22;color:#d97706}.sub .sdue.late{background:#ef444422;color:#dc2626}.sub.done .sdue{opacity:.5;background:transparent;color:var(--muted)}
+.sdue{font:inherit;font-size:11px;font-weight:600;padding:1px 6px;border-radius:999px;border:0;background:var(--accent-soft);color:var(--accent);width:auto;max-width:118px;cursor:pointer}
+.sdue.soon{background:#f59e0b22;color:#d97706}.sdue.late{background:#ef444422;color:#dc2626}.sub.done .sdue,.item.done .sdue,.gdue.off{opacity:.5;background:transparent;color:var(--muted)}
+.gh .gdue{margin-left:6px;flex:none}.item .sdue{margin:0 4px;flex:none}.list-h .sdue{flex:none}
 .sub a.sb{text-decoration:none;display:inline-flex;align-items:center;justify-content:center;font-weight:700}
 .streak{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12.5px;color:var(--muted)}
 .streak .fl{display:flex;align-items:center;gap:4px;font-weight:700;color:#f97316}.streak .fl svg{width:14px;height:14px}
@@ -507,8 +508,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <div id="toasts"></div>
 <script>
 {
-const APP_VERSION = "0.10.6";
+const APP_VERSION = "0.11.0";
 const CHANGELOG = [
+  "0.11.0 due dates everywhere: goals, lists and list items get a 📅 button that sets a due date (steps already had one); the chip turns orange within 3 days and red when late, clear the date to remove it. Every due date shows on the calendar and the week strip as an all-day entry; tapping it opens the goal or list",
   "0.10.6 auto-capitalize: the first letter of anything you type, and the first letter after a sentence, is capitalized as you type (not in addresses, secrets or search boxes)",
   "0.10.5 Completed sections: Lists and Goals get a fold-out Completed area at the bottom. Move a list there with ✓ Move to Completed, a goal goes there when marked done; Restore / Reopen brings it back",
   "0.10.4 calendar view buttons ordered shortest to longest: Day, Week, Month, Year",
@@ -790,6 +792,7 @@ function occurrences(from, to) {
       d = ev.repeat === "daily" ? addDays(d, 1) : ev.repeat === "weekly" ? addDays(d, 7) : ev.repeat === "biweekly" ? addDays(d, 14) : (() => { const x = parseYmd(d); x.setMonth(x.getMonth() + 1); return ymd(x); })();
     }
   }
+  for (const d of dueItems()) if (d.date >= from && d.date <= to) out.push({ ev: d, date: d.date });
   return out.sort((a, b) => (a.date + (a.ev.start || "")) < (b.date + (b.ev.start || "")) ? -1 : 1);
 }
 const gcalStamp = (date, time) => date.replace(/-/g, "") + "T" + (time || "09:00").replace(":", "") + "00";
@@ -916,6 +919,26 @@ const subDone = x => x.kids?.length ? x.kids.every(k => k.done) : !!x.done;
 const subStats = g => { const a = subLeaves(g); return { t: a.length, d: a.filter(x => x.done).length }; };
 const findSub = (g, id) => { for (const x of g.subs || []) { if (x.id === id) return { x, arr: g.subs, parent: null }; for (const k of x.kids || []) if (k.id === id) return { x: k, arr: x.kids, parent: x }; } return null; };
 const stepEvent = sid => events().find(e => e.stepRef === sid);
+const dueInput = (act, due, done) => `<input type="date" class="sdue${act === "gdue" ? " gdue" : ""}${done ? " off" : daysUntil(due) < 0 ? " late" : daysUntil(due) <= 3 ? " soon" : ""}" data-act="${act}" value="${esc(due)}" title="Due ${esc(relDay(due))}">`;
+// Due dates on goals, steps, lists and items show on the calendar as all-day entries. They are not
+// event docs: they are read straight from the goal and list docs, so there is nothing to keep in sync.
+function dueItems() {
+  const out = [], add = (id, title, date, color, go, mark) => { if (date) out.push({ id, title: `${mark} ${title}`, date, color, cat: "due", due: true, go }); };
+  for (const g of goals()) {
+    if (g.done) continue;
+    add("due:" + g.id, g.title, g.due, g.color, "#goals", g.emoji || "🎯");
+    const walk = arr => (arr || []).forEach(x => { if (!subDone(x)) add(`due:${g.id}:${x.id}`, x.text, x.due, g.color, "#goals", "▸"); walk(x.kids); });
+    walk(g.subs);
+  }
+  for (const l of lists()) {
+    if (l.completed) continue;
+    const go = "#list/" + l.id.slice(5);
+    add("due:" + l.id, l.title, l.due, l.color, go, l.emoji || "📝");
+    (l.items || []).forEach(it => { if (!it.done) add(`due:${l.id}:${it.id}`, it.text, it.due, l.color, go, "▸"); });
+  }
+  return out;
+}
+const dueOf = id => id && id.startsWith("due:") ? dueItems().find(d => d.id === id) : null;
 function streakInfo(g) {
   const log = g.log || {}; let n = 0, d = today(); if (!log[d]) d = addDays(d, -1);
   while (log[d] > 0 && n < 3650) { n++; d = addDays(d, -1); }
@@ -926,9 +949,9 @@ const paceText = g => { if (!g.target || !g.due || g.done) return ""; const left
 const goalPct = g => { if (g.done) return 1; if (g.target) return Math.min(1, (g.current || 0) / g.target); const { t, d } = subStats(g); return t ? d / t : 0; };
 const fmtNum = n => Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
 const goalMeta = g => { const { t, d } = subStats(g), pace = paceText(g); return `${g.target ? `${fmtNum(g.current)} / ${fmtNum(g.target)}${g.unit ? " " + esc(g.unit) : ""}` : t ? `${d}/${t} steps` : g.done ? "done" : "in progress"}${g.target && t ? ` · ${d}/${t} steps` : ""}${g.due && !g.done ? ` · ${relDay(g.due)}` : ""}${pace ? " · " + pace : ""}`; };
-const subRow = (x, depth = 0) => { const ev = stepEvent(x.id), dn = subDone(x); return `<div class="sub${dn ? " done" : ""}${!depth && x.kids?.length && FOLDS()["s:" + x.id] ? " folded" : ""}" data-sub="${x.id}"><span class="grip">${I.grip}</span>${!depth && x.kids?.length ? `<button class="fold" data-act="sfold" title="Show or hide sub-steps"><svg class="ic" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>` : ""}<button class="chk" role="checkbox" aria-checked="${dn}" data-act="stick">${I.check}</button><span class="st ren" contenteditable="true" spellcheck="false" data-act="stext" title="Tap to rename">${esc(x.text)}</span>${ev ? `<span class="schip" data-act="sopen" title="Open the event">${I.cal} ${ev.date === today() ? "today" : fmtDate(ev.date, { weekday: "short", day: "numeric" })}</span>` : ""}${x.due ? `<input type="date" class="sdue${dn ? "" : daysUntil(x.due) < 0 ? " late" : daysUntil(x.due) <= 3 ? " soon" : ""}" data-act="sdue" value="${esc(x.due)}" title="Due ${esc(relDay(x.due))}">` : ""}<span class="sfill"></span>${x.url ? `<a class="sb" href="${esc(x.url)}" target="_blank" rel="noopener" title="Open the link">↗</a>` : ""}${x.due ? "" : `<button class="sb" data-act="sdueadd" title="Add a due date">📅</button>`}${depth ? "" : `<button class="sb" data-act="saddkid" title="Add a sub-step">${I.plus}</button>`}<button class="sb" data-act="snoteadd" title="Note">${I.note}</button>${ev ? "" : `<button class="sb" data-act="ssched" title="Put it on the calendar">${I.cal}</button>`}<button class="x" data-act="sdel" title="Remove">${I.x}</button>${x.note != null ? `<div class="snote" contenteditable="true" data-act="snote">${esc(x.note)}</div>` : ""}${depth ? "" : `<div class="kids"${x.kids?.length ? "" : " hidden"}>${(x.kids || []).map(k => subRow(k, 1)).join("")}<form class="subadd kidadd" data-act="addKid"${x.kids?.length ? " hidden" : ""}><input class="in" placeholder="Add a sub-step…" autocomplete="off"><button class="btn ghost" type="submit">${I.plus}</button></form></div>`}</div>`; };
+const subRow = (x, depth = 0) => { const ev = stepEvent(x.id), dn = subDone(x); return `<div class="sub${dn ? " done" : ""}${!depth && x.kids?.length && FOLDS()["s:" + x.id] ? " folded" : ""}" data-sub="${x.id}"><span class="grip">${I.grip}</span>${!depth && x.kids?.length ? `<button class="fold" data-act="sfold" title="Show or hide sub-steps"><svg class="ic" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>` : ""}<button class="chk" role="checkbox" aria-checked="${dn}" data-act="stick">${I.check}</button><span class="st ren" contenteditable="true" spellcheck="false" data-act="stext" title="Tap to rename">${esc(x.text)}</span>${ev ? `<span class="schip" data-act="sopen" title="Open the event">${I.cal} ${ev.date === today() ? "today" : fmtDate(ev.date, { weekday: "short", day: "numeric" })}</span>` : ""}${x.due ? dueInput("sdue", x.due, dn) : ""}<span class="sfill"></span>${x.url ? `<a class="sb" href="${esc(x.url)}" target="_blank" rel="noopener" title="Open the link">↗</a>` : ""}${x.due ? "" : `<button class="sb" data-act="sdueadd" title="Add a due date">📅</button>`}${depth ? "" : `<button class="sb" data-act="saddkid" title="Add a sub-step">${I.plus}</button>`}<button class="sb" data-act="snoteadd" title="Note">${I.note}</button>${ev ? "" : `<button class="sb" data-act="ssched" title="Put it on the calendar">${I.cal}</button>`}<button class="x" data-act="sdel" title="Remove">${I.x}</button>${x.note != null ? `<div class="snote" contenteditable="true" data-act="snote">${esc(x.note)}</div>` : ""}${depth ? "" : `<div class="kids"${x.kids?.length ? "" : " hidden"}>${(x.kids || []).map(k => subRow(k, 1)).join("")}<form class="subadd kidadd" data-act="addKid"${x.kids?.length ? " hidden" : ""}><input class="in" placeholder="Add a sub-step…" autocomplete="off"><button class="btn ghost" type="submit">${I.plus}</button></form></div>`}</div>`; };
 const FOLDS = () => lsGet("fold", {});
-const goalRow = (g, big) => `<div class="goal${big ? " gbig" : ""}${big && FOLDS()[g.id] ? " folded" : ""}" data-goal="${g.id}" style="--lc:${g.color || COLORS[0]}"><div class="gh">${big ? `<button class="fold" data-act="gfold" title="Show or hide the steps"><svg class="ic" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>` : ""}<span>${g.emoji || "🎯"}</span><span class="gt${g.done ? " muted" : ""}${big ? " ren" : ""}"${big ? ' contenteditable="true" spellcheck="false" data-act="gtitle" title="Tap to rename"' : ""}>${esc(g.title)}</span><small>${goalMeta(g)}</small></div><div class="gbar"><i class="${g.done ? "done" : ""}" data-w="${goalPct(g) * 100}"></i></div>${big ? `${g.note != null ? `<div class="gnote" contenteditable="true" data-act="gnote">${esc(g.note)}</div>` : ""}${streakRow(g)}<div class="subs">${(g.subs || []).map(x => `${subRow(x)}`).join("")}<form class="subadd" data-act="addSub"><input class="in" placeholder="Add a step…" autocomplete="off"><button class="btn ghost" type="submit">${I.plus}</button></form></div><div class="gctl">${g.target ? `<button class="btn" data-act="gdec">−${fmtNum(g.step || 1)}</button><button class="btn primary" data-act="ginc">+${fmtNum(g.step || 1)}</button>` : ""}${g.daily ? `<button class="btn${(g.log || {})[today()] > 0 ? " primary" : ""}" data-act="gtoday">${(g.log || {})[today()] > 0 ? "✓ Done today" : "Did it today"}</button>` : ""}<button class="btn ghost" data-act="gdone">${g.done ? "Reopen" : "Mark done"}</button><span class="sp"></span>${g.note == null ? `<button class="btn ghost icon" data-act="gnoteadd" title="Add a note">${I.note}</button>` : ""}<button class="btn ghost icon" data-act="gedit">${I.edit}</button></div>` : ""}</div>`;
+const goalRow = (g, big) => `<div class="goal${big ? " gbig" : ""}${big && FOLDS()[g.id] ? " folded" : ""}" data-goal="${g.id}" style="--lc:${g.color || COLORS[0]}"><div class="gh">${big ? `<button class="fold" data-act="gfold" title="Show or hide the steps"><svg class="ic" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>` : ""}<span>${g.emoji || "🎯"}</span><span class="gt${g.done ? " muted" : ""}${big ? " ren" : ""}"${big ? ' contenteditable="true" spellcheck="false" data-act="gtitle" title="Tap to rename"' : ""}>${esc(g.title)}</span><small>${goalMeta(g)}</small>${big && g.due ? dueInput("gdue", g.due, g.done) : ""}</div><div class="gbar"><i class="${g.done ? "done" : ""}" data-w="${goalPct(g) * 100}"></i></div>${big ? `${g.note != null ? `<div class="gnote" contenteditable="true" data-act="gnote">${esc(g.note)}</div>` : ""}${streakRow(g)}<div class="subs">${(g.subs || []).map(x => `${subRow(x)}`).join("")}<form class="subadd" data-act="addSub"><input class="in" placeholder="Add a step…" autocomplete="off"><button class="btn ghost" type="submit">${I.plus}</button></form></div><div class="gctl">${g.target ? `<button class="btn" data-act="gdec">−${fmtNum(g.step || 1)}</button><button class="btn primary" data-act="ginc">+${fmtNum(g.step || 1)}</button>` : ""}${g.daily ? `<button class="btn${(g.log || {})[today()] > 0 ? " primary" : ""}" data-act="gtoday">${(g.log || {})[today()] > 0 ? "✓ Done today" : "Did it today"}</button>` : ""}<button class="btn ghost" data-act="gdone">${g.done ? "Reopen" : "Mark done"}</button><span class="sp"></span>${g.due ? "" : `<button class="btn ghost icon" data-act="gdueadd" title="Add a due date">📅</button>`}${g.note == null ? `<button class="btn ghost icon" data-act="gnoteadd" title="Add a note">${I.note}</button>` : ""}<button class="btn ghost icon" data-act="gedit">${I.edit}</button></div>` : ""}</div>`;
 const goalsCard = (max = 3) => { const gs = goals().filter(g => !g.done).slice(0, max), n = goals().length; return `<div class="card tcard" data-go="#goals"><div class="lbl">Goals</div>${gs.map(g => goalRow(g)).join("") || `<div class="muted small" style="padding:8px 0">No goals yet. Tap to add one.</div>`}<div class="small muted" style="margin-top:auto">${n ? `${goals().filter(g => g.done).length}/${n} reached · ` : ""}tap to manage</div></div>`; };
 function refreshGoal(el, g) { const id = el.dataset.goal; el.outerHTML = goalRow({ ...g, id }, true); const ne = $(`[data-goal="${id}"]`, $("#view")); if (ne) { requestAnimationFrame(() => $$(".gbar i[data-w]", ne).forEach(i => i.style.width = i.dataset.w + "%")); initGoalDrag(); } }
 function initGoalDrag() { $$(".gbig .subs,.gbig .kids", $("#view")).forEach(c => dragInit(c, (from, to, row) => { const id = c.closest("[data-goal]").dataset.goal, g = get(id); if (!g) return; const f = findSub(g, row.dataset.sub); if (!f) return; const [x] = f.arr.splice(from, 1); f.arr.splice(to, 0, x); put(id, g, { quiet: true }); }, ".sub")); dragInit($("#goalRows"), () => reorderGoals($("#goalRows")), ".gbig"); }
@@ -1053,12 +1076,12 @@ const TILES = {
 };
 V.lists = () => { const all = lists(), act = all.filter(l => !l.completed), fin = all.filter(l => l.completed);
   return `${topbar("Lists", `${act.length} lists`)}<div class="grid">${act.map(listCard).join("")}<div class="card sq add" style="--i:${act.length}" data-act="newlist">${I.plus}New list</div></div>${doneSec("lists", fin.length, `<div class="grid">${fin.map(listCard).join("")}</div>`)}`; };
-const itemRow = it => `<div class="item${it.done ? " done" : ""}" data-item="${it.id}"><span class="grip">${I.grip}</span><button class="chk" role="checkbox" aria-checked="${!!it.done}" data-act="tick">${I.check}</button><div class="txt ren" contenteditable="true" spellcheck="false" data-act="text">${esc(it.text)}</div><span class="fill"></span><button class="sb" data-act="inoteadd" title="Note">${I.note}</button><button class="x" data-act="delItem" title="Remove">${I.x}</button>${it.note != null ? `<div class="inote" contenteditable="true" data-act="inote">${esc(it.note)}</div>` : ""}</div>`;
+const itemRow = it => `<div class="item${it.done ? " done" : ""}" data-item="${it.id}"><span class="grip">${I.grip}</span><button class="chk" role="checkbox" aria-checked="${!!it.done}" data-act="tick">${I.check}</button><div class="txt ren" contenteditable="true" spellcheck="false" data-act="text">${esc(it.text)}</div>${it.due ? dueInput("idue", it.due, it.done) : ""}<span class="fill"></span>${it.due ? "" : `<button class="sb" data-act="idueadd" title="Add a due date">📅</button>`}<button class="sb" data-act="inoteadd" title="Note">${I.note}</button><button class="x" data-act="delItem" title="Remove">${I.x}</button>${it.note != null ? `<div class="inote" contenteditable="true" data-act="inote">${esc(it.note)}</div>` : ""}</div>`;
 V.list = id => {
   const l = get("list:" + id); if (!l) return `<div class="empty">List not found. <a href="#dash">Back home</a></div>`;
   const { t, d } = listStats(l);
   return `<div class="row" style="margin-bottom:10px"><button class="btn ghost" data-go="#dash">${I.back} Home</button><span class="sp"></span><button class="btn ghost" data-act="editList">${I.edit} Style</button><button class="btn ghost" data-act="clearDone">Clear done</button><button class="btn ghost" data-act="completeList">${l.completed ? "↩ Restore" : "✓ Move to Completed"}</button><button class="btn ghost danger" data-act="delList">Delete</button></div>
-  <div class="card" style="--lc:${l.color || COLORS[0]}"><div class="list-h"><div class="emoji" data-act="editList">${l.emoji || "📝"}</div><div class="sp" style="min-width:0"><input class="title-in" value="${esc(l.title)}" data-act="title" placeholder="List title"><div class="muted small" id="lstats">${d} of ${t} done</div></div>${ring(d, t, 68, "lg")}</div>
+  <div class="card" style="--lc:${l.color || COLORS[0]}"><div class="list-h"><div class="emoji" data-act="editList">${l.emoji || "📝"}</div><div class="sp" style="min-width:0"><input class="title-in" value="${esc(l.title)}" data-act="title" placeholder="List title"><div class="row small" style="gap:8px;flex-wrap:wrap;margin-top:2px"><span class="muted" id="lstats">${d} of ${t} done</span>${l.due ? dueInput("ldue", l.due, l.completed) : `<button class="sb" data-act="ldueadd" title="Add a due date">📅</button>`}</div></div>${ring(d, t, 68, "lg")}</div>
   <div class="items" id="items">${l.items.map(itemRow).join("") || `<div class="empty" id="emptyItems">${emptyBox("list", "Nothing here yet. Add your first item below.")}</div>`}</div>
   <form class="addrow" data-act="addItem"><input class="in" placeholder="Add an item…" autocomplete="off" enterkeyhint="done"><button class="btn primary">${I.plus}Add</button></form></div>
   <p class="small muted" style="margin-top:10px">Tip: tap a row to tick it, tap the word itself to rename, drag a row (or the dots) to reorder, <kbd>Enter</kbd> adds the next one.</p>`;
@@ -1124,7 +1147,7 @@ const fmtH = h => (Math.round(h * 10) / 10).toLocaleString(undefined, { maximumF
 const payChips = ({ hours, pay, shifts }, label) => shifts ? `<div class="paybar"><span>${label}:</span><span><b>${shifts}</b> shift${shifts === 1 ? "" : "s"}</span><span>·</span><span><b>${fmtH(hours)}</b> h</span>${pay ? `<span>·</span><span>~<b>${money(pay)}</b></span>` : `<span class="small">· add a pay rate to the presets to see earnings</span>`}</div>` : "";
 function weekSummary() {
   const w0 = weekStart(today()), w1 = addDays(w0, 6), ws = workStats(w0, w1), parts = [];
-  const other = occurrences(w0, w1).filter(x => x.ev.cat !== "work").length, steps = occurrences(w0, w1).filter(x => x.ev.stepRef).length;
+  const other = occurrences(w0, w1).filter(x => x.ev.cat !== "work" && !x.ev.due).length, steps = occurrences(w0, w1).filter(x => x.ev.stepRef).length;
   const due = goals().filter(g => !g.done && g.due && g.due >= w0 && g.due <= w1).length;
   if (ws.shifts) parts.push(`<span><b>${fmtH(ws.hours)} h</b> of shifts${ws.pay ? ` (~${money(ws.pay)})` : ""}</span>`);
   if (other) parts.push(`<span><b>${other}</b> other event${other === 1 ? "" : "s"}</span>`);
@@ -1521,9 +1544,11 @@ document.addEventListener("click", async e => {
   if (!$("#view").contains(e.target) && !$("#fabWrap").contains(e.target)) return;
   if (act === "newlist") { const id = newList("New list"); location.hash = "#list/" + id.slice(5); setTimeout(() => { const i = $(".title-in"); i?.focus(); i?.select(); }, 60); return; }
   if (act === "editList") { listStyleForm("list:" + arg); return; }
+  if (act === "ldueadd") { const d = new Date(); d.setDate(d.getDate() + 7); patch("list:" + arg, l => l.due = ymd(d), { quiet: true }); render(); setTimeout(() => $("#view .list-h .sdue")?.showPicker?.(), 60); return; }
   if (act === "completeList") { const l = get("list:" + arg); patch("list:" + arg, x => x.completed = !x.completed, { quiet: true }); toast(l.completed ? `“${l.title}” moved back to Lists` : `“${l.title}” moved to Completed`); location.hash = "#lists"; render(); return; }
   if (act === "delList") { const l = get("list:" + arg); if (await ask("Delete list?", `“${l.title}” and its ${l.items.length} items will be removed everywhere.`)) { location.hash = "#dash"; delDoc("list:" + arg, "List deleted", { quiet: true }); } return; }
   if (act === "clearDone") { const rows = $$("#items .item.done"); if (!rows.length) return toast("Nothing to clear"); rows.forEach(r => collapse(r)); patch("list:" + arg, l => l.items = l.items.filter(i => !i.done), { quiet: true }); setTimeout(() => updateListHeader(get("list:" + arg)), 50); return; }
+  if (act === "idueadd") { const row = t.closest("[data-item]"), iid = row.dataset.item, lid = "list:" + arg, l = get(lid), it = l.items.find(i => i.id === iid); if (!it) return; const d = new Date(); d.setDate(d.getDate() + 7); it.due = ymd(d); put(lid, l, { quiet: true }); row.outerHTML = itemRow(it); setTimeout(() => $(`#items [data-item="${iid}"] .sdue`)?.showPicker?.(), 30); return; }
   if (act === "tick") {
     const row = t.closest("[data-item]"), iid = row.dataset.item, l = get("list:" + arg), it = l.items.find(i => i.id === iid); if (!it) return;
     it.done = !it.done; it.doneAt = it.done ? Date.now() : null; put("list:" + arg, l, { quiet: true });
@@ -1594,6 +1619,7 @@ document.addEventListener("click", async e => {
   if (act === "gnote" || act === "snote" || act === "inote") return;
   if (act === "gtitle" || act === "stext" || act === "wname") return;
   if (act === "gedit") { const id = t.closest("[data-goal]").dataset.goal; goalForm({ id, ...get(id) }); return; }
+  if (act === "gdueadd") { const el = t.closest("[data-goal]"), id = el.dataset.goal, g = get(id); if (!g) return; const d = new Date(); d.setDate(d.getDate() + 7); g.due = ymd(d); put(id, g, { quiet: true }); refreshGoal(el, g); setTimeout(() => $(`[data-goal="${id}"] .gdue`)?.showPicker?.(), 30); return; }
   if (act === "stick" || act === "sdel" || act === "saddkid" || act === "snoteadd" || act === "ssched" || act === "sopen" || act === "sdueadd") {
     const el = t.closest("[data-goal]"), id = el.dataset.goal, g = get(id), row = t.closest("[data-sub]"), sid = row.dataset.sub; if (!g) return;
     g.subs = g.subs || []; const f = findSub(g, sid); if (!f) return; const { x, arr } = f;
@@ -1614,7 +1640,7 @@ document.addEventListener("click", async e => {
   const acc = e.target.closest("[data-accent]"); if (acc) { lsSet("pref", { ...PREF(), accent: acc.dataset.accent }); applyTheme(); $$("[data-accent]").forEach(x => x.classList.toggle("on", x === acc)); return; }
   if (act) return;
   const tc = e.target.closest("#trainCard"); if (tc && !e.target.closest("a")) { open(tc.dataset.href, "_blank", "noopener"); return; }
-  const evr = e.target.closest("[data-ev]"); if (evr) { eventForm({ id: evr.dataset.ev, ...get(evr.dataset.ev) }); return; }
+  const evr = e.target.closest("[data-ev]"); if (evr) { const du = dueOf(evr.dataset.ev); if (du) { location.hash = du.go; return; } eventForm({ id: evr.dataset.ev, ...get(evr.dataset.ev) }); return; }
   const day = e.target.closest("[data-day]"); if (day) { calDayClick(e, day); return; }
   const go = e.target.closest("[data-go]"); if (go) { location.hash = go.dataset.go; return; }
 });
@@ -1628,6 +1654,9 @@ $("#view").addEventListener("change", e => {
   if (t.id === "budgetIn") { put("settings:budget", { ...(get("settings:budget") || {}), monthly: Number(t.value) || 0 }, { quiet: true }); render(); return; }
   if (t.id === "swapCols") { lsSet("pref", { ...PREF(), swapCols: t.checked }); toast("Saved"); return; }
   if (t.id === "bgInt" || t.id === "bgBlur" || t.id === "heroCover" || t.id === "sideArt") { lsSet("pref", { ...PREF(), bgIntensity: +$("#bgInt").value, bgBlur: $("#bgBlur").checked, heroCover: $("#heroCover").checked, sideArt: $("#sideArt").checked }); applyTheme(); return; }
+  if (t.dataset.act === "gdue") { const el = t.closest("[data-goal]"), id = el.dataset.goal, g = get(id); if (!g) return; if (t.value) g.due = t.value; else delete g.due; put(id, g, { quiet: true }); refreshGoal(el, g); return; }
+  if (t.dataset.act === "ldue") { patch("list:" + arg, l => { if (t.value) l.due = t.value; else delete l.due; }, { quiet: true }); render(); return; }
+  if (t.dataset.act === "idue") { const row = t.closest("[data-item]"), iid = row.dataset.item, lid = "list:" + arg; patch(lid, l => { const it = l.items.find(i => i.id === iid); if (it) { if (t.value) it.due = t.value; else delete it.due; } }, { quiet: true }); const it = get(lid)?.items.find(i => i.id === iid); if (it) row.outerHTML = itemRow(it); return; }
   if (t.dataset.act === "sdue") { const el = t.closest("[data-goal]"), id = el.dataset.goal, g = get(id), f = g && findSub(g, t.closest("[data-sub]").dataset.sub); if (!f) return; if (t.value) f.x.due = t.value; else delete f.x.due; put(id, g, { quiet: true }); refreshGoal(el, g); return; }
   if (t.dataset.act === "title") patch("list:" + arg, l => l.title = t.value.trim() || "Untitled", { quiet: true });
 });
@@ -1721,7 +1750,7 @@ function dayModal(d) {
     ${occ.length ? occ.map(({ ev, date }) => evRow(ev, date)).join("") : `<div class="muted small" style="padding:8px 0">Nothing on this day.</div>`}</div>
     <div class="row" style="margin-top:16px"><span class="sp"></span><button class="btn ghost" data-act="close">Close</button><button class="btn primary" data-act="add">${I.plus}Add event</button></div>`);
   b.addEventListener("click", e => {
-    const ev = e.target.closest("[data-ev]"); if (ev) { b.remove(); eventForm({ id: ev.dataset.ev, ...get(ev.dataset.ev) }); return; }
+    const ev = e.target.closest("[data-ev]"); if (ev) { b.remove(); const du = dueOf(ev.dataset.ev); if (du) { location.hash = du.go; return; } eventForm({ id: ev.dataset.ev, ...get(ev.dataset.ev) }); return; }
     if (e.target.closest("[data-act=add]")) { b.remove(); eventForm({}, d); }
   });
 }
