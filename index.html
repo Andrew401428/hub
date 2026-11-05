@@ -508,8 +508,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <div id="toasts"></div>
 <script>
 {
-const APP_VERSION = "0.11.0";
+const APP_VERSION = "0.11.1";
 const CHANGELOG = [
+  "0.11.1 the calendar groups due dates: several steps of one goal (or items of one list) due the same day show as one entry, like 65 due · Apply to 100 internships, instead of one row each",
   "0.11.0 due dates everywhere: goals, lists and list items get a 📅 button that sets a due date (steps already had one); the chip turns orange within 3 days and red when late, clear the date to remove it. Every due date shows on the calendar and the week strip as an all-day entry; tapping it opens the goal or list",
   "0.10.6 auto-capitalize: the first letter of anything you type, and the first letter after a sentence, is capitalized as you type (not in addresses, secrets or search boxes)",
   "0.10.5 Completed sections: Lists and Goals get a fold-out Completed area at the bottom. Move a list there with ✓ Move to Completed, a goal goes there when marked done; Restore / Reopen brings it back",
@@ -927,14 +928,26 @@ function dueItems() {
   for (const g of goals()) {
     if (g.done) continue;
     add("due:" + g.id, g.title, g.due, g.color, "#goals", g.emoji || "🎯");
-    const walk = arr => (arr || []).forEach(x => { if (!subDone(x)) add(`due:${g.id}:${x.id}`, x.text, x.due, g.color, "#goals", "▸"); walk(x.kids); });
+    // Several steps due the same day show as one entry ("65 due · Apply to 100 internships"),
+    // so a goal with a long list of steps does not stretch the calendar.
+    const byDay = {};
+    const walk = arr => (arr || []).forEach(x => { if (!subDone(x) && x.due) (byDay[x.due] = byDay[x.due] || []).push(x); walk(x.kids); });
     walk(g.subs);
+    for (const [d, xs] of Object.entries(byDay)) {
+      if (xs.length === 1) add(`due:${g.id}:${xs[0].id}`, xs[0].text, d, g.color, "#goals", "▸");
+      else add(`due:${g.id}:@${d}`, `${xs.length} due · ${g.title}`, d, g.color, "#goals", g.emoji || "🎯");
+    }
   }
   for (const l of lists()) {
     if (l.completed) continue;
     const go = "#list/" + l.id.slice(5);
     add("due:" + l.id, l.title, l.due, l.color, go, l.emoji || "📝");
-    (l.items || []).forEach(it => { if (!it.done) add(`due:${l.id}:${it.id}`, it.text, it.due, l.color, go, "▸"); });
+    const byDay = {};
+    (l.items || []).forEach(it => { if (!it.done && it.due) (byDay[it.due] = byDay[it.due] || []).push(it); });
+    for (const [d, xs] of Object.entries(byDay)) {
+      if (xs.length === 1) add(`due:${l.id}:${xs[0].id}`, xs[0].text, d, l.color, go, "▸");
+      else add(`due:${l.id}:@${d}`, `${xs.length} due · ${l.title}`, d, l.color, go, l.emoji || "📝");
+    }
   }
   return out;
 }
