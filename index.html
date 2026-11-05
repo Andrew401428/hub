@@ -81,6 +81,19 @@ textarea{resize:vertical;min-height:60px}
 .topbar h1{font-size:24px;font-weight:800;letter-spacing:-.02em}
 .topbar .sub{color:var(--muted);font-size:13px;margin-top:1px}
 /* bottom tab bar (mobile) */
+/* recipes */
+.rcp .list-h{align-items:center}.rcp .remoji{width:58px;flex:none;font-size:28px;text-align:center;padding:4px}
+.rcp .rh{margin:18px 0 6px;font-size:15px;font-weight:700}
+.rnote{width:100%;margin-top:10px;resize:vertical;font:inherit}
+.rsteps{list-style:none;margin:0;padding:0;counter-reset:rs}
+.rsteps li{display:flex;gap:6px;align-items:flex-start;margin:4px 0}
+.rsteps li::before{counter-increment:rs;content:counter(rs) ".";color:var(--muted);min-width:22px;padding-top:10px;font-weight:700;text-align:right}
+.rsteps .rst{flex:1;resize:none;overflow:hidden;min-height:40px;line-height:1.4;font:inherit}
+.rcp .x{border:0;background:none;color:var(--muted);padding:9px 6px;cursor:pointer;flex:none}.rcp .x .ic{width:16px;height:16px}
+.rcp .x:hover{color:var(--text)}
+.rsadd{margin:2px 0 0 26px}
+.rside{border-left:3px solid var(--lc);padding:2px 0 8px 12px;margin:12px 0}
+.rside .row{gap:6px}.rside .rstitle{font-weight:700;flex:1}
 .tabbar{position:fixed;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:40;background:color-mix(in srgb,var(--card) 88%,transparent);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow-lg);display:flex;padding:6px;isolation:isolate}
 .tabbar a{flex:1;position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 0 5px;font-size:10.5px;font-weight:600;color:var(--muted);border-radius:16px;transition:color .25s}
 .tabbar a .ic{width:22px;height:22px;transition:transform .35s var(--spring)}
@@ -508,8 +521,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <div id="toasts"></div>
 <script>
 {
-const APP_VERSION = "0.11.1";
+const APP_VERSION = "0.12.0";
 const CHANGELOG = [
+  "0.12.0 recipes: a Recipes section (sidebar, and a tile under Sections on the phone). Each recipe has a name, an icon, optional ingredients or notes, numbered steps, and a Goes with part where every side (like asparagus with a steak) has its own steps. Enter starts the next step, Backspace in an empty step removes it",
   "0.11.1 the calendar groups due dates: several steps of one goal (or items of one list) due the same day show as one entry, like 65 due · Apply to 100 internships, instead of one row each",
   "0.11.0 due dates everywhere: goals, lists and list items get a 📅 button that sets a due date (steps already had one); the chip turns orange within 3 days and red when late, clear the date to remove it. Every due date shows on the calendar and the week strip as an all-day entry; tapping it opens the goal or list",
   "0.10.6 auto-capitalize: the first letter of anything you type, and the first letter after a sentence, is capitalized as you type (not in addresses, secrets or search boxes)",
@@ -558,6 +572,7 @@ const relDay = s => { const n = daysUntil(s); return n === 0 ? "today" : n === 1
 const lsGet = (k, d) => { try { const v = localStorage.getItem("hub:" + k); return v == null ? d : JSON.parse(v); } catch { return d; } };
 const lsSet = (k, v) => { try { localStorage.setItem("hub:" + k, JSON.stringify(v)); } catch {} };
 const I = {   /* icons */
+  chef: '<svg class="ic" viewBox="0 0 24 24"><path d="M7 14h10v5a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1z"/><path d="M7 14a4 4 0 1 1 2.6-7A4 4 0 0 1 17 8a3.5 3.5 0 0 1 0 6"/></svg>',
   grid: '<svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>',
   list: '<svg class="ic" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg>',
   cart: '<svg class="ic" viewBox="0 0 24 24"><path d="M3 5h2l2 11h11l2-7H7"/><circle cx="9" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/></svg>',
@@ -729,7 +744,7 @@ async function pull(full = false) {
     }
     persist(); SYNC.lastPull = new Date();
     setSync("ok", "Synced " + SYNC.lastPull.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
-    if (changed && !document.querySelector(".dragging") && !document.activeElement?.isContentEditable) render();
+    if (changed && !document.querySelector(".dragging") && !document.activeElement?.isContentEditable && !document.activeElement?.closest?.(".rcp")) render();
   } catch (e) { setSync("bad", "Sync failed: " + e.message); }
   pulling = false; return seen;
 }
@@ -1077,16 +1092,74 @@ V.dash = () => {
   const nextDue = w.filter(i => !i.done && i.by)[0], nextEv = up[0];
   return hero + focusCard() + `<section><div class="tiles">${trainingCard()}${goalsCard()}</div></section>` + todayCard + `<section><div class="sec-h"><h2>Sections</h2><span class="n">hold a tile to reorder</span></div><div class="tiles" id="secTiles">${tileOrder().map(k => TILES[k]({ ls, tot, done, w, wd, nextDue, nextEv })).join("")}</div></section>`;
 };
-const TILE_KEYS = ["lists", "wish", "cal", "glance", "settings"];
+const TILE_KEYS = ["lists", "recipes", "wish", "cal", "glance", "settings"];
 const tileOrder = () => { const o = (PREF().tileOrder || []).filter(k => TILE_KEYS.includes(k)); return o.concat(TILE_KEYS.filter(k => !o.includes(k))); };
 const tile = (k, ic, title, sub) => `<div class="card tile" data-go="#${k}" data-tile="${k}"><div class="ti">${ic}</div><div class="tt"><b>${title}</b><span>${sub}</span></div>${I.chev.replace('class="ic"', 'class="ic chev"')}</div>`;
 const TILES = {
   lists: ({ ls, tot, done }) => tile("lists", I.list, "Lists", `${ls.length} lists · ${tot - done} open`),
   wish: ({ w, wd, nextDue }) => tile("wish", I.cart, "Wishlist", `${w.length - wd} to buy${nextDue ? " · " + esc(nextDue.name) + " " + relDay(nextDue.by) : ""}`),
   cal: ({ nextEv }) => tile("cal", I.cal, "Calendar", nextEv ? esc(nextEv.ev.title) + " · " + fmtDate(nextEv.date, { weekday: "short" }) + " " + fmtTime(nextEv.ev.start) : "nothing in the next week"),
+  recipes: () => { const n = recipes().length; return tile("recipes", I.chef, "Recipes", n ? `${n} recipe${n === 1 ? "" : "s"}` : "write down how you cook things"); },
   glance: () => tile("glance", I.glance, "Glance", "big clock, today, focus and next steps"),
   settings: () => tile("settings", I.cog, "Settings", SYNC.cfg ? SYNC.msg : "not synced"),
 };
+/* ---------- recipes ---------- */
+const recipes = () => all("recipe:").sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+const rStepList = (steps, where) => `<ol class="rsteps" data-rwhere="${where}">${(steps || []).map((x, i) => `<li data-rstep="${x.id}"><textarea class="in rst" rows="1" data-r="step" placeholder="Step ${i + 1}">${esc(x.text || "")}</textarea><button class="x" data-r="sdel" title="Remove this step" aria-label="Remove step">${I.x}</button></li>`).join("")}</ol><button class="btn ghost rsadd" data-r="sadd" data-rwhere="${where}">${I.plus}Add a step</button>`;
+V.recipes = () => {
+  const rs = recipes();
+  return `${topbar("Recipes", `${rs.length} recipe${rs.length === 1 ? "" : "s"}`)}<div class="grid">${rs.map((r, i) => `<div class="card sq" style="--lc:${r.color || "#ef4444"};--i:${i}" data-go="#recipe/${r.id.slice(7)}"><div class="emoji">${esc(r.emoji || "🍳")}</div><h3>${esc(r.title || "Untitled")}</h3><div class="mini"><div>${(r.steps || []).filter(x => x.text).length} steps</div>${(r.sides || []).length ? `<div>with ${esc(r.sides.map(x => x.title || "a side").join(", "))}</div>` : ""}</div></div>`).join("")}<div class="card sq add" style="--i:${rs.length}" data-r="rnew">${I.plus}New recipe</div></div>
+  <p class="small muted" style="margin-top:10px">Each recipe has its steps, and under "Goes with" any sides, each with their own steps.</p>`;
+};
+V.recipe = id => {
+  const r = get("recipe:" + id); if (!r) return `<div class="empty">Recipe not found. <a href="#recipes">All recipes</a></div>`;
+  return `<div class="row" style="margin-bottom:10px"><button class="btn ghost" data-go="#recipes">${I.back} Recipes</button><span class="sp"></span><button class="btn ghost" data-r="rdel">Delete recipe</button></div>
+  <div class="card rcp" data-recipe="${id}" style="--lc:${r.color || "#ef4444"}"><div class="list-h"><input class="in remoji" data-r="emoji" value="${esc(r.emoji || "🍳")}" maxlength="8" aria-label="Icon"><input class="title-in" data-r="title" value="${esc(r.title || "")}" placeholder="Recipe name, like Steak"></div>
+  <textarea class="in rnote" data-r="note" rows="2" placeholder="Ingredients or notes (optional)">${esc(r.note || "")}</textarea>
+  <h3 class="rh">Steps</h3>${rStepList(r.steps, "main")}
+  <h3 class="rh">Goes with</h3>${(r.sides || []).map(x => `<div class="rside" data-rside="${x.id}"><div class="row"><input class="in rstitle" data-r="stitle" value="${esc(x.title || "")}" placeholder="Side, like Asparagus"><button class="x" data-r="sideDel" title="Remove this side" aria-label="Remove side">${I.x}</button></div>${rStepList(x.steps, x.id)}</div>`).join("")}
+  <button class="btn" data-r="sideAdd">${I.plus}Add something that goes with it</button></div>
+  <p class="small muted" style="margin-top:10px">Tip: Enter in a step starts the next one. Backspace in an empty step removes it.</p>`;
+};
+const rSteps = (r, where) => { if (where === "main") return (r.steps = r.steps || []); const sd = (r.sides || []).find(x => x.id === where); return sd ? (sd.steps = sd.steps || []) : null; };
+const rFocus = sel => setTimeout(() => { const el = $(sel); if (el) { el.focus(); const n = el.value.length; try { el.setSelectionRange(n, n); } catch {} } }, 40);
+const rGrow = el => { el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; };
+function rSaveField(el) {
+  const box = el.closest(".rcp"); if (!box) return; const rid = "recipe:" + box.dataset.recipe, k = el.dataset.r;
+  patch(rid, r => {
+    if (k === "title" || k === "emoji" || k === "note") r[k] = el.value.trim() || (k === "emoji" ? "🍳" : "");
+    else if (k === "stitle") { const sd = (r.sides || []).find(x => x.id === el.closest("[data-rside]").dataset.rside); if (sd) sd.title = el.value.trim(); }
+    else if (k === "step") { const arr = rSteps(r, el.closest("[data-rwhere]").dataset.rwhere), st = arr && arr.find(x => x.id === el.closest("[data-rstep]").dataset.rstep); if (st) st.text = el.value.trim(); }
+  }, { quiet: true });
+}
+$("#view").addEventListener("click", e => {
+  const t = e.target.closest("[data-r]"); if (!t || t.matches("input,textarea")) return;
+  const act = t.dataset.r, box = t.closest(".rcp"), rid = box ? "recipe:" + box.dataset.recipe : null;
+  if (act === "rnew") { const id = uid(); put("recipe:" + id, { title: "", emoji: "🍳", note: "", steps: [{ id: uid(), text: "" }], sides: [], created: Date.now() }, { quiet: true }); location.hash = "#recipe/" + id; rFocus(".rcp .title-in"); return; }
+  if (act === "rdel") { const id = $(".rcp")?.dataset.recipe; if (!id) return; location.hash = "#recipes"; delDoc("recipe:" + id, "Recipe deleted"); return; }
+  if (!rid) return;
+  if (act === "sadd") { const where = t.dataset.rwhere, nid = uid(); patch(rid, r => { const a = rSteps(r, where); if (a) a.push({ id: nid, text: "" }); }); rFocus(`[data-rstep="${nid}"] textarea`); return; }
+  if (act === "sdel") { const where = t.closest("[data-rwhere]").dataset.rwhere, sid = t.closest("[data-rstep]").dataset.rstep; patch(rid, r => { const a = rSteps(r, where); if (a) a.splice(a.findIndex(x => x.id === sid), 1); }); return; }
+  if (act === "sideAdd") { const nid = uid(); patch(rid, r => { (r.sides = r.sides || []).push({ id: nid, title: "", steps: [{ id: uid(), text: "" }] }); }); rFocus(`[data-rside="${nid}"] .rstitle`); return; }
+  if (act === "sideDel") { const sid = t.closest("[data-rside]").dataset.rside, old = JSON.parse(JSON.stringify(get(rid))); const nm = (old.sides || []).find(x => x.id === sid)?.title || "side"; patch(rid, r => { r.sides = (r.sides || []).filter(x => x.id !== sid); }); toast(`Removed ${nm}`, 6000, { label: "Undo", fn: () => put(rid, old) }); return; }
+});
+$("#view").addEventListener("change", e => { if (e.target.closest(".rcp") && e.target.dataset.r) rSaveField(e.target); });
+$("#view").addEventListener("input", e => { if (e.target.matches(".rcp textarea")) rGrow(e.target); });
+$("#view").addEventListener("keydown", e => {
+  const el = e.target; if (!el.matches(".rcp textarea.rst")) return;
+  const box = el.closest(".rcp"), rid = "recipe:" + box.dataset.recipe, where = el.closest("[data-rwhere]").dataset.rwhere, sid = el.closest("[data-rstep]").dataset.rstep;
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault(); const nid = uid(), text = el.value.trim();
+    patch(rid, r => { const a = rSteps(r, where); if (!a) return; const i = a.findIndex(x => x.id === sid); if (i >= 0) a[i].text = text; a.splice(i + 1, 0, { id: nid, text: "" }); });
+    rFocus(`[data-rstep="${nid}"] textarea`);
+  } else if (e.key === "Backspace" && !el.value) {
+    const r0 = get(rid), a0 = r0 && rSteps(r0, where); if (!a0 || a0.length < 2) return;
+    e.preventDefault(); const i = a0.findIndex(x => x.id === sid), prev = a0[Math.max(0, i - 1)].id === sid ? a0[1].id : a0[Math.max(0, i - 1)].id;
+    patch(rid, r => { const a = rSteps(r, where); a.splice(a.findIndex(x => x.id === sid), 1); });
+    rFocus(`[data-rstep="${prev}"] textarea`);
+  }
+});
+
 V.lists = () => { const all = lists(), act = all.filter(l => !l.completed), fin = all.filter(l => l.completed);
   return `${topbar("Lists", `${act.length} lists`)}<div class="grid">${act.map(listCard).join("")}<div class="card sq add" style="--i:${act.length}" data-act="newlist">${I.plus}New list</div></div>${doneSec("lists", fin.length, `<div class="grid">${fin.map(listCard).join("")}</div>`)}`; };
 const itemRow = it => `<div class="item${it.done ? " done" : ""}" data-item="${it.id}"><span class="grip">${I.grip}</span><button class="chk" role="checkbox" aria-checked="${!!it.done}" data-act="tick">${I.check}</button><div class="txt ren" contenteditable="true" spellcheck="false" data-act="text">${esc(it.text)}</div>${it.due ? dueInput("idue", it.due, it.done) : ""}<span class="fill"></span>${it.due ? "" : `<button class="sb" data-act="idueadd" title="Add a due date">📅</button>`}<button class="sb" data-act="inoteadd" title="Note">${I.note}</button><button class="x" data-act="delItem" title="Remove">${I.x}</button>${it.note != null ? `<div class="inote" contenteditable="true" data-act="inote">${esc(it.note)}</div>` : ""}</div>`;
@@ -1466,7 +1539,7 @@ V.settings = () => {
 const DEFAULT_STORES = ["Amazon.com", "Walmart", "Target", "Best Buy", "Costco", "Home Depot", "Lowe's", "B&H Photo", "Newegg", "Micro Center", "REI", "Dick's Sporting Goods", "Apple", "Staples", "Office Depot", "Kohl's", "Macy's", "Nike", "Adidas", "GameStop", "Chewy", "Petco", "Sam's Club", "Academy Sports", "Backcountry"];
 
 /* ---------- router + render ---------- */
-const TABS = [["dash", "Home", I.grid], ["lists", "Lists", I.list], ["goals", "Goals", I.target], ["wish", "Wishlist", I.cart], ["cal", "Calendar", I.cal], ["settings", "Settings", I.cog]];
+const TABS = [["dash", "Home", I.grid], ["lists", "Lists", I.list], ["goals", "Goals", I.target], ["recipes", "Recipes", I.chef], ["wish", "Wishlist", I.cart], ["cal", "Calendar", I.cal], ["settings", "Settings", I.cog]];
 const PHONE_TABS = ["dash", "lists", "goals", "cal", "wish"];
 const isPhone = () => !matchMedia("(min-width:900px)").matches;
 function buildNav() {
@@ -1475,7 +1548,7 @@ function buildNav() {
 }
 function route() { const h = location.hash.replace(/^#/, "") || "dash"; const [name, ...rest] = h.split("/"); return { name: V[name] ? name : "dash", arg: rest.join("/") }; }
 function moveInd() {
-  const { name } = route(), tab = name === "list" ? "lists" : name;
+  const { name } = route(), tab = name === "list" ? "lists" : name === "recipe" ? "recipes" : name;
   for (const nav of [$("#sideNav"), $("#tabbar")]) {
     const a = $(`a[data-t="${tab}"]`, nav), ind = $(".ind", nav); if (!a) continue;
     if (nav.id === "tabbar") { ind.style.width = a.offsetWidth + "px"; ind.style.transform = `translateX(${a.offsetLeft}px)`; }
@@ -1484,7 +1557,7 @@ function moveInd() {
 }
 let lastView = null;
 function render() {
-  const { name, arg } = route(), tab = name === "list" ? "lists" : name;
+  const { name, arg } = route(), tab = name === "list" ? "lists" : name === "recipe" ? "recipes" : name;
   $$("#sideNav a,#tabbar a").forEach(a => a.classList.toggle("on", a.dataset.t === tab));
   const main = $("#view"); $(".content").classList.toggle("wide", name === "dash"); document.body.classList.toggle("glance", name === "glance"); glanceWake(name === "glance");
   const addIn = $(".addrow input.in", main), keepAdd = addIn && document.activeElement === addIn ? addIn.value : null;
@@ -1495,6 +1568,7 @@ function render() {
   if (name === "settings") { const a = (ACCENTS[PREF().accent] || ACCENTS.indigo)[0]; $$("[data-bd]", main).forEach(el => { const k = el.dataset.bd; if (k === "photo") { const img = lsGet("bgimg", null); if (img) el.style.backgroundImage = `url(${img})`; } else { const c = BACKDROPS[k].css(a); Object.assign(el.style, c); if (c.backgroundAttachment) el.style.backgroundAttachment = "scroll"; } }); }
   animateRings(main); requestAnimationFrame(() => $$(".bar i[data-w],.gbar i[data-w]", main).forEach(i => i.style.width = i.dataset.w + "%"));
   if (name === "goals") initGoalDrag();
+  if (name === "recipe") $$(".rcp textarea", main).forEach(rGrow);
   if (name === "dash") dragInit($("#secTiles"), () => lsSet("pref", { ...PREF(), tileOrder: $$("[data-tile]", $("#secTiles")).map(t => t.dataset.tile) }), ".tile");
   if (name === "wish") dragInit($("#wishes"), () => { $$("[data-wish]", $("#wishes")).forEach((el, i) => { const w = get(el.dataset.wish); if (w && w.order !== i) { w.order = i; put(el.dataset.wish, w, { quiet: true }); } }); }, ".wish");
   $$(".grid", main).forEach(gr => dragInit(gr, () => { $$(".sq[data-go^='#list/']", gr).forEach((el, i) => { const id = "list:" + el.dataset.go.slice(6), l = get(id); if (l && l.order !== i) { l.order = i; put(id, l, { quiet: true }); } }); }, ".sq[data-go^='#list/']", { grid: true }));
