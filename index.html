@@ -384,8 +384,12 @@ body.glance .side,body.glance .tabbar,body.glance #fabWrap{display:none!importan
 .phone-only{display:none}
 @media (max-width:899px){.phone-only{display:inline-flex}}
 .dash-cols{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:26px}
-@media (min-width:900px){.content.wide{max-width:calc(1080px + 2 * 304px)}.dash-cols{grid-template-columns:minmax(220px,280px) minmax(0,1080px) minmax(220px,280px);justify-content:center;align-items:stretch;gap:24px}.dash-cols .mid{min-width:0}.dash-cols .col{display:flex;flex-direction:column}.dash-cols .col .tcard{flex:1;min-height:0}.dash-cols .mid section:last-child{margin-bottom:0}}
+@media (min-width:900px){.content.wide{max-width:calc(1080px + 2 * 304px)}.dash-cols{grid-template-columns:minmax(220px,280px) minmax(0,1080px) minmax(220px,280px);justify-content:center;align-items:stretch;gap:24px}.dash-cols .mid{min-width:0}.dash-cols .col{display:flex;flex-direction:column}.dash-cols .col{gap:16px}.dash-cols .col .tcard{flex:1;min-height:0}.dash-cols .col .train{flex:none}.dash-cols .col .hwcard{flex:1}.dash-cols .mid section:last-child{margin-bottom:0}}
 
+.train{min-height:0}.dash-cols .train .big{font-size:28px}
+.hwcard{display:flex;flex-direction:column;gap:6px;padding:14px}.hwcard .lbl{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.hwl{display:flex;flex-direction:column}.hw{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}.hw:last-child{border-bottom:0}
+.hw .nm{flex:1;min-width:0;cursor:pointer;overflow-wrap:anywhere}
 .train .blocks{margin-top:10px;display:flex;flex-direction:column;gap:6px}
 .train .blocks div{font-size:12.5px;color:#cbd5e1;display:flex;gap:8px;align-items:center}
 .train .blocks div::before{content:"";width:6px;height:6px;border-radius:50%;background:#34d399;flex:none;opacity:.8}
@@ -525,8 +529,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <div id="toasts"></div>
 <script>
 {
-const APP_VERSION = "0.12.5";
+const APP_VERSION = "0.12.6";
 const CHANGELOG = [
+  "0.12.6 home: the V6 card is smaller and the wishlist sits right under it, showing every item to buy (tick them right there) and growing with the list. Lists live on Home, so the Lists tab is gone (completed lists are one tap away on Home). Number keys: 1 Home, 2 Goals, 3 Recipes, 4 Wishlist, 5 Calendar, 6 Settings",
   "0.12.5 shortcuts: Esc backs out of wherever you are (closes the popup, stops typing, then goes up a page: recipe to Recipes, list to Lists, anything else to Home). 1 to 7 follow the sidebar, n makes something new on that page, ? shows them all",
   "0.12.4 opens instantly from the copy saved on the device, like a regular app. New versions download in the background and an Update ready button appears; tap Reload to switch",
   "0.12.3 tap a goal's emoji on the Goals page to pick a new one from the list, the same way lists and recipes work",
@@ -1062,6 +1067,12 @@ async function fetchV6() {
     V6.err = "";
   } catch (e) { V6.err = String(e.message || e); }
 }
+function wishCard(w) {
+  const open = w.filter(i => !i.done), wd = w.length - open.length;
+  return `<div class="card hwcard"><div class="row" style="align-items:center"><div class="lbl" data-go="#wish" style="cursor:pointer">🛍️ Wishlist</div><span class="sp"></span><span class="small muted">${open.length} to buy</span>${ring(wd, w.length, 34)}</div>
+  <div class="hwl">${open.map(i => `<div class="hw" data-wish="${i.id}"><button class="chk" role="checkbox" aria-checked="false" data-act="wtick" style="--lc:#f59e0b">${I.check}</button><span class="nm" data-go="#wish">${esc(i.name)}</span>${i.by ? `<span class="small muted">${relDay(i.by)}</span>` : ""}</div>`).join("") || `<div class="small muted" style="padding:6px 0">Nothing to buy.</div>`}</div>
+  <button class="btn ghost" data-go="#wish" style="align-self:flex-start">${I.plus}Add or edit ${I.chev}</button></div>`;
+}
 function trainingCard() {
   const p = PREF(), d = V6.data; let body;
   if (!p.v6secret) body = `<div class="next">Add your V6 Trainer secret word in Settings and today's sets show up here.</div>`;
@@ -1111,18 +1122,17 @@ V.dash = () => {
     ? `<section>${weekHead}<div class="card agenda" style="padding:6px 12px 12px">${wdays.map(dd => { const xs = wocc.filter(x => x.date === dd); if (!xs.length && dd !== today()) return ""; return `<div class="dh${dd === today() ? " today" : ""}">${dd === today() ? "Today" : fmtDate(dd, { weekday: "long", day: "numeric" })}</div>${xs.map(({ ev, date }) => evRow(ev, date, true)).join("") || `<div class="muted small" style="padding:4px 8px">Nothing today.</div>`}`; }).join("") || `<div class="empty" style="padding:18px">Nothing this week.</div>`}</div></section>`
     : `<section>${weekHead}<div class="wk">${wdays.map(dd => { const xs = wocc.filter(x => x.date === dd); return `<div class="wkd${dd === today() ? " today" : ""}${dd < today() ? " past" : ""}" data-day="${dd}"><div class="h">${fmtDate(dd, { weekday: "short" })}<b>${parseYmd(dd).getDate()}</b></div>${xs.map(({ ev }) => `<div class="wke" data-ev="${ev.id}" style="--ec:${evColor(ev)}"><b>${esc(ev.title)}</b><span>${ev.start ? fmtTime(ev.start) + (ev.end ? " – " + fmtTime(ev.end) : "") : "All day"}</span></div>`).join("") || '<div class="none">Free</div>'}</div>`; }).join("")}</div></section>`;
   if (!phone) {
-    const L = PREF().swapCols ? goalsCard(8) : trainingCard(), R = PREF().swapCols ? trainingCard() : goalsCard(8);
+    const TW = trainingCard() + wishCard(w), L = PREF().swapCols ? goalsCard(8) : TW, R = PREF().swapCols ? TW : goalsCard(8);
     let o = `<div class="dash-cols"><div class="col">${L}</div><div class="mid">${hero}${focusCard()}${todayCard}</div><div class="col">${R}</div></div>`;
-    o += `<div class="dash-cols"><div class="col"></div><section class="mid"><div class="sec-h"><h2>Lists</h2><span class="n">${done}/${tot} done</span><span class="sp"></span><button class="btn ghost" data-go="#lists">All lists ${I.chev}</button></div><div class="grid">${ls.map(listCard).join("")}`;
-    const due = w.filter(i => !i.done && i.by).slice(0, 3);
-    o += `<div class="card sq" style="--lc:#f59e0b;--i:${ls.length}" data-go="#wish"><div class="emoji">🛍️</div><h3>Wishlist</h3><div class="mini">${due.map(i => `<div>${esc(i.name)} · ${relDay(i.by)}</div>`).join("") || (w.length ? `<div>${w.length - wd} to buy</div>` : '<span class="chip grey">Empty</span>')}</div><div class="foot"><span><b>${wd}</b>/${w.length}</span>${ring(wd, w.length, 54)}</div></div>`;
+    o += `<div class="dash-cols"><div class="col"></div><section class="mid"><div class="sec-h"><h2>Lists</h2><span class="n">${done}/${tot} done</span><span class="sp"></span><button class="btn ghost" data-go="#lists">Completed lists ${I.chev}</button></div><div class="grid">${ls.map(listCard).join("")}`;
     o += `<div class="card sq add" style="--i:${ls.length + 1}" data-act="newlist">${I.plus}New list</div></div></section><div class="col"></div></div>`;
     return o;
   }
   const nextDue = w.filter(i => !i.done && i.by)[0], nextEv = up[0];
-  return hero + focusCard() + `<section><div class="tiles">${trainingCard()}${goalsCard()}</div></section>` + todayCard + `<section><div class="sec-h"><h2>Sections</h2><span class="n">hold a tile to reorder</span></div><div class="tiles" id="secTiles">${tileOrder().map(k => TILES[k]({ ls, tot, done, w, wd, nextDue, nextEv })).join("")}</div></section>`;
+  const listsSec = `<section><div class="sec-h"><h2>Lists</h2><span class="n">${done}/${tot} done</span><span class="sp"></span><button class="btn ghost" data-go="#lists">Completed ${I.chev}</button></div><div class="grid">${ls.map(listCard).join("")}<div class="card sq add" style="--i:${ls.length}" data-act="newlist">${I.plus}New list</div></div></section>`;
+  return hero + focusCard() + `<section><div class="tiles">${trainingCard()}${goalsCard()}</div></section><section>${wishCard(w)}</section>` + listsSec + todayCard + `<section><div class="sec-h"><h2>Sections</h2><span class="n">hold a tile to reorder</span></div><div class="tiles" id="secTiles">${tileOrder().map(k => TILES[k]({ ls, tot, done, w, wd, nextDue, nextEv })).join("")}</div></section>`;
 };
-const TILE_KEYS = ["lists", "recipes", "wish", "cal", "glance", "settings"];
+const TILE_KEYS = ["recipes", "cal", "glance", "settings"];
 const tileOrder = () => { const o = (PREF().tileOrder || []).filter(k => TILE_KEYS.includes(k)); return o.concat(TILE_KEYS.filter(k => !o.includes(k))); };
 const tile = (k, ic, title, sub) => `<div class="card tile" data-go="#${k}" data-tile="${k}"><div class="ti">${ic}</div><div class="tt"><b>${title}</b><span>${sub}</span></div>${I.chev.replace('class="ic"', 'class="ic chev"')}</div>`;
 const TILES = {
@@ -1245,7 +1255,7 @@ function budgetBar(w) {
     <div class="bar"><i class="spent${over ? " over" : ""}" style="width:${sp}%"></i><i class="plan" style="width:${pl}%"></i></div>
     <div class="row"><span><b>${money(spent)}</b> spent</span><span>·</span><span><b>${money(planned)}</b> planned (need-by this month)</span>${lim ? `<span>·</span><span><b>${money(Math.max(0, lim - spent - planned))}</b> left${over ? ` <span style="color:var(--bad)">(${money(spent + planned - lim)} over)</span>` : ""}</span>` : `<span>· set a monthly amount to see what is left</span>`}</div></div>`;
 }
-function updateWishHeader() { const w = wishItems(), wd = w.filter(i => i.done).length; setRing($("#view .topbar .ring"), wd, w.length); const s = $("#view .topbar .sub"); if (s) s.textContent = `${w.length - wd} to buy`; }
+function updateWishHeader() { if (route().name === "dash") { setTimeout(render, 350); return; } const w = wishItems(), wd = w.filter(i => i.done).length; const rg = $("#view .topbar .ring"); if (rg) setRing(rg, wd, w.length); const s = $("#view .topbar .sub"); if (s) s.textContent = `${w.length - wd} to buy`; }
 const CAL = { view: lsGet("calview", "month"), anchor: today(), dir: "", armed: null };
 const START_H = 6, END_H = 24, HOUR_PX = 48;
 const DEFAULT_PRESETS = [
@@ -1574,8 +1584,8 @@ V.settings = () => {
 const DEFAULT_STORES = ["Amazon.com", "Walmart", "Target", "Best Buy", "Costco", "Home Depot", "Lowe's", "B&H Photo", "Newegg", "Micro Center", "REI", "Dick's Sporting Goods", "Apple", "Staples", "Office Depot", "Kohl's", "Macy's", "Nike", "Adidas", "GameStop", "Chewy", "Petco", "Sam's Club", "Academy Sports", "Backcountry"];
 
 /* ---------- router + render ---------- */
-const TABS = [["dash", "Home", I.grid], ["lists", "Lists", I.list], ["goals", "Goals", I.target], ["recipes", "Recipes", I.chef], ["wish", "Wishlist", I.cart], ["cal", "Calendar", I.cal], ["settings", "Settings", I.cog]];
-const PHONE_TABS = ["dash", "lists", "goals", "cal", "wish"];
+const TABS = [["dash", "Home", I.grid], ["goals", "Goals", I.target], ["recipes", "Recipes", I.chef], ["wish", "Wishlist", I.cart], ["cal", "Calendar", I.cal], ["settings", "Settings", I.cog]];
+const PHONE_TABS = ["dash", "goals", "recipes", "cal", "wish"];
 const isPhone = () => !matchMedia("(min-width:900px)").matches;
 function buildNav() {
   const mk = ks => TABS.filter(([k]) => !ks || ks.includes(k)).map(([k, t, ic]) => `<a href="#${k}" data-t="${k}">${ic}<span>${t}</span></a>`).join("");
@@ -1870,14 +1880,14 @@ addEventListener("keydown", e => {
   if (a && a !== document.body && a.matches("input,textarea,select,[contenteditable],[contenteditable] *")) { setTimeout(() => a.blur(), 0); return; }   // the page's own Esc (undo a rename) runs first
   if (route().name === "cal" && CAL.armed) { CAL.armed = null; render(); return; }
   const { name, arg } = route();
-  if (arg && V[name + "s"]) location.hash = "#" + name + "s";
+  if (arg && name !== "list" && V[name + "s"]) location.hash = "#" + name + "s";
   else if (name !== "dash") location.hash = "#dash";
 }, true);
 function keysSheet() {
   const row = (k, t) => `<div class="row" style="padding:5px 0;border-bottom:1px solid var(--line)"><kbd style="min-width:64px;font-weight:600">${k}</kbd><span>${t}</span></div>`;
   sheet(`<h3>Shortcuts</h3><div style="margin:8px 0 16px">${[
     ["Esc", "Back out: close the popup, stop typing, then go up a page"],
-    ["1 to 7", "Home, Lists, Goals, Recipes, Wishlist, Calendar, Settings"],
+    ["1 to 6", "Home, Goals, Recipes, Wishlist, Calendar, Settings"],
     ["n", "New list, goal, recipe, wishlist item or event (on that page)"],
     ["g", "Glance view"],
     ["m w d y", "Calendar: month, week, day, year"],
@@ -1888,7 +1898,7 @@ document.addEventListener("keydown", e => {
   if (e.key === "Escape" || e.target.matches("input,textarea,select,[contenteditable],[contenteditable] *") || e.metaKey || e.ctrlKey || e.altKey) return;
   if ($(".backdrop:not(.out)")) return;
   if (e.key === "?") { keysSheet(); return; }
-  const map = { 1: "#dash", 2: "#lists", 3: "#goals", 4: "#recipes", 5: "#wish", 6: "#cal", 7: "#settings" };
+  const map = { 1: "#dash", 2: "#goals", 3: "#recipes", 4: "#wish", 5: "#cal", 6: "#settings" };
   if (map[e.key]) location.hash = map[e.key];
   if (e.key === "n") { const r = route().name; if (r === "lists" || r === "dash") $("[data-act=newlist]")?.click(); if (r === "recipes") $("[data-r=rnew]")?.click(); if (r === "goals") goalForm({}); }
   if (e.key === "g") location.hash = route().name === "glance" ? "#dash" : "#glance";
