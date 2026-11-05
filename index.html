@@ -525,8 +525,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <div id="toasts"></div>
 <script>
 {
-const APP_VERSION = "0.12.4";
+const APP_VERSION = "0.12.5";
 const CHANGELOG = [
+  "0.12.5 shortcuts: Esc backs out of wherever you are (closes the popup, stops typing, then goes up a page: recipe to Recipes, list to Lists, anything else to Home). 1 to 7 follow the sidebar, n makes something new on that page, ? shows them all",
   "0.12.4 opens instantly from the copy saved on the device, like a regular app. New versions download in the background and an Update ready button appears; tap Reload to switch",
   "0.12.3 tap a goal's emoji on the Goals page to pick a new one from the list, the same way lists and recipes work",
   "0.12.2 icon picker fixes for the phone: opening it no longer pops up the keyboard, and the chosen icon box is no longer a text field, so tapping an emoji just picks it. Tap the search box when you want to search",
@@ -640,7 +641,6 @@ function sheet(html, { onClose } = {}) {
   b.innerHTML = `<div class="sheet"><div class="handle"></div>${html}</div>`;
   b.close = () => { if (b.classList.contains("out")) return; b.classList.add("out"); setTimeout(() => { b.remove(); onClose?.(); }, 230); };
   b.addEventListener("click", e => { if (e.target === b || e.target.closest("[data-act='close']")) b.close(); });
-  const esc = e => { if (e.key === "Escape") { b.close(); removeEventListener("keydown", esc); } }; addEventListener("keydown", esc);
   document.body.appendChild(b);
   if (matchMedia("(min-width:600px)").matches) $("input:not([type=date]):not([type=time]),textarea", b)?.focus();
   return b;
@@ -1858,13 +1858,42 @@ document.addEventListener("input", e => {
   if (ce) { node.data = out; const r = document.createRange(); r.setStart(node, pos); r.collapse(true); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); }
   else { const end = t.selectionEnd; t.value = out; t.setSelectionRange(pos, end); }
 }, true);
+// Esc backs out one level from wherever you are: the top popup, then the box you are typing in,
+// then a picked calendar slot, then the page you opened (a recipe goes back to Recipes, a list to
+// Lists), then Home.
+// The level is decided when the key goes down (capture), so one press only ever backs out one step.
+addEventListener("keydown", e => {
+  if (e.key !== "Escape" || e.isComposing) return;
+  const sheets = $$(".backdrop:not(.out)");
+  if (sheets.length) { e.preventDefault(); sheets[sheets.length - 1].close(); return; }
+  const a = document.activeElement;
+  if (a && a !== document.body && a.matches("input,textarea,select,[contenteditable],[contenteditable] *")) { setTimeout(() => a.blur(), 0); return; }   // the page's own Esc (undo a rename) runs first
+  if (route().name === "cal" && CAL.armed) { CAL.armed = null; render(); return; }
+  const { name, arg } = route();
+  if (arg && V[name + "s"]) location.hash = "#" + name + "s";
+  else if (name !== "dash") location.hash = "#dash";
+}, true);
+function keysSheet() {
+  const row = (k, t) => `<div class="row" style="padding:5px 0;border-bottom:1px solid var(--line)"><kbd style="min-width:64px;font-weight:600">${k}</kbd><span>${t}</span></div>`;
+  sheet(`<h3>Shortcuts</h3><div style="margin:8px 0 16px">${[
+    ["Esc", "Back out: close the popup, stop typing, then go up a page"],
+    ["1 to 7", "Home, Lists, Goals, Recipes, Wishlist, Calendar, Settings"],
+    ["n", "New list, goal, recipe, wishlist item or event (on that page)"],
+    ["g", "Glance view"],
+    ["m w d y", "Calendar: month, week, day, year"],
+    ["← →", "Calendar: previous, next"],
+    ["?", "This list"]].map(([k, t]) => row(k, t)).join("")}</div><div class="row"><span class="sp"></span><button class="btn primary" data-act="close">Close</button></div>`);
+}
 document.addEventListener("keydown", e => {
-  if (e.target.matches("input,textarea,[contenteditable]") || e.metaKey || e.ctrlKey || e.altKey) return;
-  const map = { 1: "#dash", 2: "#lists", 3: "#goals", 4: "#wish", 5: "#cal", 6: "#settings" };
+  if (e.key === "Escape" || e.target.matches("input,textarea,select,[contenteditable],[contenteditable] *") || e.metaKey || e.ctrlKey || e.altKey) return;
+  if ($(".backdrop:not(.out)")) return;
+  if (e.key === "?") { keysSheet(); return; }
+  const map = { 1: "#dash", 2: "#lists", 3: "#goals", 4: "#recipes", 5: "#wish", 6: "#cal", 7: "#settings" };
   if (map[e.key]) location.hash = map[e.key];
+  if (e.key === "n") { const r = route().name; if (r === "lists" || r === "dash") $("[data-act=newlist]")?.click(); if (r === "recipes") $("[data-r=rnew]")?.click(); if (r === "goals") goalForm({}); }
   if (e.key === "g") location.hash = route().name === "glance" ? "#dash" : "#glance";
   if (e.key === "n" && route().name === "cal") eventForm({});
-  if (route().name === "cal") { const vm = { m: "month", w: "week", d: "day", y: "year" }; if (vm[e.key]) setView(vm[e.key]); if (e.key === "Escape" && CAL.armed) { CAL.armed = null; render(); } if (e.key === "ArrowLeft") calMove(-1); if (e.key === "ArrowRight") calMove(1); }
+  if (route().name === "cal") { const vm = { m: "month", w: "week", d: "day", y: "year" }; if (vm[e.key]) setView(vm[e.key]); if (e.key === "ArrowLeft") calMove(-1); if (e.key === "ArrowRight") calMove(1); }
   if (e.key === "n" && route().name === "wish") wishForm({});
 });
 function dayModal(d) {
