@@ -525,8 +525,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <div id="toasts"></div>
 <script>
 {
-const APP_VERSION = "0.12.3";
+const APP_VERSION = "0.12.4";
 const CHANGELOG = [
+  "0.12.4 opens instantly from the copy saved on the device, like a regular app. New versions download in the background and an Update ready button appears; tap Reload to switch",
   "0.12.3 tap a goal's emoji on the Goals page to pick a new one from the list, the same way lists and recipes work",
   "0.12.2 icon picker fixes for the phone: opening it no longer pops up the keyboard, and the chosen icon box is no longer a text field, so tapping an emoji just picks it. Tap the search box when you want to search",
   "0.12.1 icons: about 563 emojis with a search box that narrows the list as you type (steak, dog, pumpkin, gym...). Used for lists, goals and recipes (tap the recipe icon). You can still paste any emoji into the box beside the search",
@@ -1898,7 +1899,13 @@ render(); checkReminders(); fetchV6();
 setInterval(() => { if (!document.hidden) fetchV6(); }, 60000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) fetchV6(); });
 if (SYNC.cfg) { setSync("busy", "Connecting…"); pull().then(() => { ensurePresets(); return push(); }).then(startSyncLoop); }
-if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+  // The app opens from the saved copy; the worker checks GitHub in the background and says when a
+  // newer version is saved. Coming back to the app also triggers that check.
+  navigator.serviceWorker.addEventListener("message", m => { if (m.data?.type === "hub-update" && m.data.v !== APP_VERSION) toast(`Update ready (v${m.data.v})`, 20000, { label: "Reload", fn: () => location.reload() }); });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && navigator.serviceWorker.controller) fetch("./index.html").catch(() => {}); });
+}
 window.hubdbg = () => ({ v: APP_VERSION, DB, SYNC });
 }
 </script>
