@@ -387,6 +387,7 @@ body.glance .side,body.glance .tabbar,body.glance #fabWrap{display:none!importan
 @media (min-width:900px){.content.wide{max-width:calc(1080px + 2 * 304px)}.dash-cols{grid-template-columns:minmax(220px,280px) minmax(0,1080px) minmax(220px,280px);justify-content:center;align-items:stretch;gap:24px}.dash-cols .mid{min-width:0}.dash-cols .col{display:flex;flex-direction:column}.dash-cols .col{gap:16px}.dash-cols .col .tcard{flex:1;min-height:0}.dash-cols .col .train{flex:none}.dash-cols .col .hwcard{flex:1}.dash-cols .mid section:last-child{margin-bottom:0}}
 
 .train{min-height:0}.dash-cols .train .big{font-size:28px}
+.datebtn{position:relative;overflow:hidden;cursor:pointer;white-space:nowrap}.datebtn input[type=date]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0;padding:0;margin:0}
 .hwcard{display:flex;flex-direction:column;gap:6px;padding:14px}.hwcard .lbl{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
 .hwl{display:flex;flex-direction:column}.hw{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}.hw:last-child{border-bottom:0}
 .hw .nm{flex:1;min-width:0;cursor:pointer;overflow-wrap:anywhere}
@@ -529,8 +530,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <div id="toasts"></div>
 <script>
 {
-const APP_VERSION = "0.12.6";
+const APP_VERSION = "0.12.7";
 const CHANGELOG = [
+  "0.12.7 dates: the wishlist has a Need by button that opens a calendar to pick the day (no typing), and tapping an item's date opens the calendar to change it. Clicking any date box in the app opens its calendar",
   "0.12.6 home: the V6 card is smaller and the wishlist sits right under it, showing every item to buy (tick them right there) and growing with the list. Lists live on Home, so the Lists tab is gone (completed lists are one tap away on Home). Number keys: 1 Home, 2 Goals, 3 Recipes, 4 Wishlist, 5 Calendar, 6 Settings",
   "0.12.5 shortcuts: Esc backs out of wherever you are (closes the popup, stops typing, then goes up a page: recipe to Recipes, list to Lists, anything else to Home). 1 to 7 follow the sidebar, n makes something new on that page, ? shows them all",
   "0.12.4 opens instantly from the copy saved on the device, like a regular app. New versions download in the background and an Update ready button appears; tap Reload to switch",
@@ -1191,6 +1193,16 @@ $("#view").addEventListener("click", e => {
   if (act === "sideDel") { const sid = t.closest("[data-rside]").dataset.rside, old = JSON.parse(JSON.stringify(get(rid))); const nm = (old.sides || []).find(x => x.id === sid)?.title || "side"; patch(rid, r => { r.sides = (r.sides || []).filter(x => x.id !== sid); }); toast(`Removed ${nm}`, 6000, { label: "Undo", fn: () => put(rid, old) }); return; }
 });
 $("#view").addEventListener("change", e => { if (e.target.closest(".rcp") && e.target.dataset.r) rSaveField(e.target); });
+// Dates are picked from a calendar: a click on any date box opens it (no typing into month/day/year)
+document.addEventListener("click", e => {
+  const d = e.target.closest && e.target.closest("input[type=date]"); if (!d || !d.showPicker) return;
+  try { d.showPicker(); } catch (err) {}
+});
+document.addEventListener("change", e => {
+  const d = e.target; if (!d.matches || !d.matches(".datebtn input[type=date]")) return;
+  if (d.dataset.act === "wby") { const id = d.closest("[data-wish]")?.dataset.wish, w = id && get(id); if (!w) return; w.by = d.value || ""; put(id, w, { quiet: true }); render(); return; }
+  const sp = d.parentElement.querySelector("span"); if (sp) sp.textContent = d.value ? fmtDate(d.value, { weekday: "short", month: "short", day: "numeric" }) : sp.dataset.empty;
+});
 $("#view").addEventListener("input", e => { if (e.target.matches(".rcp textarea")) rGrow(e.target); });
 $("#view").addEventListener("keydown", e => {
   const el = e.target; if (!el.matches(".rcp textarea.rst")) return;
@@ -1224,7 +1236,7 @@ const wishRow = it => {
   const pr = get("price:" + it.id.slice(5)), best = pr?.offers?.[0], late = it.by && !it.done && daysUntil(it.by) < 0, soon = it.by && !it.done && daysUntil(it.by) >= 0 && daysUntil(it.by) <= 3, open = lsGet("wopen", {})[it.id];
   let o = `<div class="wish${it.done ? " done" : ""}" data-wish="${it.id}"><div class="head"><button class="chk" role="checkbox" aria-checked="${!!it.done}" data-act="wtick" style="--lc:#f59e0b">${I.check}</button><span class="name ren" contenteditable="true" spellcheck="false" data-act="wname" title="Tap to rename">${esc(it.name)}</span>
     ${best ? `<span class="price${it.budget && best.total > it.budget ? " over" : ""}" data-act="wopen">${money(best.total)}</span>` : ""}<button class="btn ghost icon" data-act="wedit" title="Edit">${I.edit}</button></div>
-    <div class="meta">${it.by ? `<span class="chip ${late ? "bad" : soon ? "work" : "grey"}">${late ? "⚠ " : ""}${relDay(it.by)}</span>` : ""}${it.qty > 1 ? `<span>×${it.qty}</span>` : ""}${it.budget ? `<span>budget ${money(it.budget)}</span>` : ""}${best ? `<span>${esc(best.store)}</span>` : ""}${it.note ? `<span>· ${esc(it.note)}</span>` : ""}</div>`;
+    <div class="meta">${it.done && !it.by ? "" : `<label class="chip datebtn ${it.by ? (late ? "bad" : soon ? "work" : "grey") : "grey"}" title="Pick the day you need it by">${it.by ? (late ? "⚠ " : "") + relDay(it.by) : "📅 Need by"}<input type="date" data-act="wby" value="${esc(it.by || "")}" aria-label="Need by"></label>`}${it.qty > 1 ? `<span>×${it.qty}</span>` : ""}${it.budget ? `<span>budget ${money(it.budget)}</span>` : ""}${best ? `<span>${esc(best.store)}</span>` : ""}${it.note ? `<span>· ${esc(it.note)}</span>` : ""}</div>`;
   if (open) {
     o += `<div class="offers">`;
     if (pr?.offers?.length) {
@@ -1241,7 +1253,7 @@ const wishRow = it => {
 V.wish = () => {
   const w = wishItems(), wd = w.filter(i => i.done).length, meta = get("meta:pricebot");
   return `${topbar("Wishlist", `${w.length - wd} to buy`, ring(wd, w.length, 56))}
-  ${budgetBar(w)}<div class="card"><form class="addrow wishadd" data-act="addWish" style="margin:0 0 8px"><input class="in" placeholder="Something you need to buy…" autocomplete="off"><input class="in" type="date" style="width:auto" title="Need by"><button class="btn primary">${I.plus}Add</button></form>
+  ${budgetBar(w)}<div class="card"><form class="addrow wishadd" data-act="addWish" style="margin:0 0 8px"><input class="in" placeholder="Something you need to buy…" autocomplete="off"><label class="btn ghost datebtn" title="Pick the day you need it by">📅 <span data-empty="Need by">Need by</span><input type="date" aria-label="Need by"></label><button class="btn primary">${I.plus}Add</button></form>
   <div id="wishes">${w.map(wishRow).join("") || emptyBox("cart", "Nothing on the wishlist yet.")}</div></div>
   <p class="small muted" style="margin-top:10px">Prices come from the price bot: it searches Google Shopping, keeps only trusted stores, adds estimated tax and listed shipping, and saves the cheapest few here.${meta?.ran_at ? " Last run " + new Date(meta.ran_at).toLocaleString() + (meta.note ? " · " + esc(meta.note) : "") : " It has not run yet."}</p>`;
 };
@@ -1842,6 +1854,7 @@ $("#view").addEventListener("submit", e => {
     const by = $("input[type=date]", f)?.value || "", id = "wish:" + uid();
     put(id, { name: v, by, qty: 1, budget: "", note: "", done: false, created: Date.now() }, { quiet: true });
     render(); const row = $(`[data-wish="${id}"]`); row?.classList.add("in"); $(".addrow input.in", $("#view"))?.focus();
+    const db = $(".wishadd .datebtn span", $("#view")); if (db) db.textContent = db.dataset.empty;
   }
 });
 $("#view").addEventListener("keydown", e => {
