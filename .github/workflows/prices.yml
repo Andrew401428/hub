@@ -8,6 +8,10 @@ permissions:
 jobs:
   prices:
     runs-on: ubuntu-latest
+    env:
+      HUB_URL: ${{ secrets.HUB_URL }}
+      HUB_SECRET: ${{ secrets.HUB_SECRET }}
+      SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -15,7 +19,3 @@ jobs:
           python-version: "3.12"
       - run: python pricebot/price_check.py
         if: env.SERPAPI_KEY != ''
-        env:
-          HUB_URL: ${{ secrets.HUB_URL }}
-          HUB_SECRET: ${{ secrets.HUB_SECRET }}
-          SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}

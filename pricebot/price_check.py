@@ -10,6 +10,9 @@ Env vars (GitHub Actions secrets or a local .env):
 Settings come from the app (Settings > Price bot, doc settings:pricebot): recheck_minutes, max_per_run,
 monthly_budget, tax_pct, stores. MAX_SEARCHES env overrides max_per_run. The bot counts searches per
 calendar month in meta:pricebot and stops when the budget is used, so a frequent schedule stays free.
+Daily split: each day gets (searches left this month) / (days left this month), counted from the start of
+that day, so 250 a month is about 8 a day. Unused searches roll forward to the remaining days, and the last
+day of the month gets whatever is left. Days are UTC.
 
 Usage:  python price_check.py            # normal run
         python price_check.py --dry      # search but do not write
@@ -138,15 +141,21 @@ def main():
         recheck = timedelta(minutes=float(cfg["recheck_minutes"]))
     else:
         recheck = timedelta(days=float(cfg.get("recheck_days", 1)))
-    max_per_run = int(MAX_SEARCHES_ENV or cfg.get("max_per_run") or 3)
-    budget = int(cfg.get("monthly_budget") or 95)
+    max_per_run = int(MAX_SEARCHES_ENV or cfg.get("max_per_run") or 10)
+    budget = min(250, int(cfg.get("monthly_budget") or 250))   # SerpApi free plan: 250 a month
     now = datetime.now(timezone.utc)
     meta = hub("?id=meta:pricebot")
     meta = meta[0]["data"] if meta else {}
     month = now.strftime("%Y-%m")
     used = int(meta.get("month_used") or 0) if meta.get("month") == month else 0
     left = max(0, budget - used)
-    MAX_SEARCHES = min(max_per_run, left)
+    day = now.strftime("%Y-%m-%d")
+    day_used = int(meta.get("day_used") or 0) if meta.get("day") == day else 0
+    nxt = (now.replace(day=28) + timedelta(days=4)).replace(day=1)
+    days_left = (nxt.date() - now.date()).days                  # today included
+    daily = max(0, budget - (used - day_used)) // days_left    # fixed for the whole day
+    today_left = max(0, daily - day_used)
+    MAX_SEARCHES = min(max_per_run, left, today_left)
     wishes = [(k, v) for k, v in docs.items() if k.startswith("wish:") and not v.get("deleted") and not v.get("done")]
     # soonest need-by first, then oldest check first
     def prio(kv):
@@ -154,7 +163,7 @@ def main():
         p = docs.get("price:" + k[5:]) or {}
         return (v.get("by") or "9999-99-99", p.get("checked_at") or "")
     wishes.sort(key=prio)
-    print(f"{len(wishes)} open wishlist items, {used}/{budget} searches used this month, up to {MAX_SEARCHES} now")
+    print(f"{len(wishes)} open wishlist items, {used}/{budget} used this month, {day_used}/{daily} today, up to {MAX_SEARCHES} now")
     searched = 0
     for k, v in wishes:
         if searched >= MAX_SEARCHES:
@@ -175,8 +184,9 @@ def main():
         print(f"- {v.get('name')}: {len(top)} trusted offers" + (f", best {best['store']} ${best['total']}" if best else ""))
         upsert("price:" + k[5:], {"query": query, "offers": top, "checked_at": now.isoformat(), "title": best["title"] if best else ""})
         time.sleep(1)
-    note = f"{searched} searched, {len(wishes)} open" + ("" if left else ", monthly budget used up")
-    upsert("meta:pricebot", {"ran_at": now.isoformat(), "note": note, "month": month, "month_used": used + searched, "budget": budget})
+    note = f"{searched} searched, {len(wishes)} open, {day_used + searched}/{daily} today" + ("" if left else ", monthly budget used up")
+    upsert("meta:pricebot", {"ran_at": now.isoformat(), "note": note, "month": month, "month_used": used + searched, "budget": budget,
+                             "day": day, "day_used": day_used + searched, "daily": daily})
 
 
 if __name__ == "__main__":
