@@ -133,7 +133,18 @@ def offers_for(item, cfg):
     return query, top
 
 
+def serp_account():
+    """SerpApi's free account check (does not use a search): confirms the key and shows searches left."""
+    try:
+        with urllib.request.urlopen("https://serpapi.com/account.json?api_key=" + urllib.parse.quote(SERP), timeout=20) as r:
+            a = json.loads(r.read().decode())
+        print(f"SerpApi key OK: {a.get('plan_name')} plan, {a.get('searches_per_month')} a month, {a.get('total_searches_left')} left")
+    except Exception as e:
+        print(f"SerpApi key check failed: {e}")
+
+
 def main():
+    serp_account()
     rows = hub("?prefix=wish:") + hub("?prefix=price:") + hub("?id=settings:pricebot")
     docs = {r["id"]: r["data"] for r in rows}
     cfg = docs.get("settings:pricebot") or {}
