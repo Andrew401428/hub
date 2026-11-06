@@ -98,6 +98,25 @@ def search(query):
         return json.loads(r.read().decode())
 
 
+def words(v):
+    return [w.strip().lower() for w in (v or "").split(",") if w.strip()]
+
+
+def filt_key(item):
+    """What the filters were when an item was last searched: a change means search it again."""
+    return "|".join(words(item.get("must"))) + "/" + "|".join(words(item.get("exclude")))
+
+
+def title_ok(title, item):
+    """Every 'must include' entry has to be in the title (an entry like "backpack/pack" means either word),
+    and no 'leave out' word may be."""
+    t = title.lower()
+    for w in words(item.get("must")):
+        if not any(alt.strip() and alt.strip() in t for alt in w.split("/")):
+            return False
+    return not any(w in t for w in words(item.get("exclude")))
+
+
 def offers_for(item, cfg):
     query = (item.get("query") or item.get("name") or "").strip()
     if not query:
@@ -110,7 +129,7 @@ def offers_for(item, cfg):
     for r in res.get("shopping_results", []) + res.get("inline_shopping_results", []):
         price = r.get("extracted_price")
         src = r.get("source") or r.get("seller") or ""
-        if price is None or not store_ok(src, stores):
+        if price is None or not store_ok(src, stores) or not title_ok(r.get("title", ""), item):
             continue
         ship = parse_ship(r.get("delivery") or r.get("shipping"))
         unit_tax = round(price * tax, 2)
@@ -182,7 +201,7 @@ def main():
         p = docs.get("price:" + k[5:]) or {}
         if not FORCE and p.get("checked_at"):
             last = datetime.fromisoformat(p["checked_at"].replace("Z", "+00:00"))
-            if now - last < recheck and p.get("query") == (v.get("query") or v.get("name")):
+            if now - last < recheck and p.get("query") == (v.get("query") or v.get("name")) and p.get("filt", "/") == filt_key(v):
                 print(f"- {v.get('name')}: checked {p['checked_at'][:16]}, skip")
                 continue
         try:
@@ -193,7 +212,7 @@ def main():
         searched += 1
         best = top[0] if top else None
         print(f"- {v.get('name')}: {len(top)} trusted offers" + (f", best {best['store']} ${best['total']}" if best else ""))
-        upsert("price:" + k[5:], {"query": query, "offers": top, "checked_at": now.isoformat(), "title": best["title"] if best else ""})
+        upsert("price:" + k[5:], {"query": query, "filt": filt_key(v), "offers": top, "checked_at": now.isoformat(), "title": best["title"] if best else ""})
         time.sleep(1)
     note = f"{searched} searched, {len(wishes)} open, {day_used + searched}/{daily} today" + ("" if left else ", monthly budget used up")
     upsert("meta:pricebot", {"ran_at": now.isoformat(), "note": note, "month": month, "month_used": used + searched, "budget": budget,

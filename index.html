@@ -530,8 +530,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <div id="toasts"></div>
 <script>
 {
-const APP_VERSION = "0.12.8";
+const APP_VERSION = "0.12.9";
 const CHANGELOG = [
+  "0.12.9 wishlist: each item can list words the product title must include and words to leave out, so description searches (a climbing backpack, a harness) keep the right products",
   "0.12.8 price bot: 250 searches a month (the SerpApi free plan), split evenly across the days left in the month (about 8 a day); unused ones roll forward",
   "0.12.7 dates: the wishlist has a Need by button that opens a calendar to pick the day (no typing), and tapping an item's date opens the calendar to change it. Clicking any date box in the app opens its calendar",
   "0.12.6 home: the V6 card is smaller and the wishlist sits right under it, showing every item to buy (tick them right there) and growing with the list. Lists live on Home, so the Lists tab is gone (completed lists are one tap away on Home). Number keys: 1 Home, 2 Goals, 3 Recipes, 4 Wishlist, 5 Calendar, 6 Settings",
@@ -1522,11 +1523,13 @@ function eventForm(ev = {}, date) {
   });
 }
 function wishForm(it = {}) {
-  const v = { name: "", by: "", qty: 1, budget: "", note: "", query: "", ...it };
+  const v = { name: "", by: "", qty: 1, budget: "", note: "", query: "", must: "", exclude: "", ...it };
   const b = sheet(`<h3>${it.id ? "Edit item" : "New item"}</h3>
     <label class="field">Item</label><input class="in" name="name" value="${esc(v.name)}" placeholder="What you need">
     <div class="two"><div><label class="field">Need by</label><input class="in" type="date" name="by" value="${v.by}"></div><div><label class="field">Quantity</label><input class="in" type="number" min="1" name="qty" value="${v.qty}"></div></div>
     <div class="two"><div><label class="field">Budget ($)</label><input class="in" type="number" step="0.01" name="budget" value="${v.budget}"></div><div><label class="field">Search terms for the bot</label><input class="in" name="query" value="${esc(v.query)}" placeholder="defaults to the name"></div></div>
+    <div class="two"><div><label class="field">Title must include</label><input class="in" name="must" value="${esc(v.must)}" placeholder="grigri, backpack/pack"></div><div><label class="field">Leave out results with</label><input class="in" name="exclude" value="${esc(v.exclude)}" placeholder="rope bag, kids"></div></div>
+    <p class="small muted" style="margin:6px 0 0">Separate words with commas. backpack/pack means either one. Handy when you only have a description, so the bot skips look-alikes.</p>
     <label class="field">Notes</label><textarea name="note" rows="2">${esc(v.note)}</textarea>
     <div class="row" style="margin-top:16px">${it.id ? '<button class="btn ghost danger" data-act="delWish">Delete</button>' : ""}<span class="sp"></span><button class="btn ghost" data-act="close">Cancel</button><button class="btn primary" data-act="saveWish">Save</button></div>`);
   b.addEventListener("click", async e => {
