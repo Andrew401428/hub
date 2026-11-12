@@ -73,6 +73,7 @@ textarea{resize:vertical;min-height:60px}
 
 /* ---------- layout ---------- */
 .app{display:flex;min-height:100vh}
+@media (max-width:899px){html,body{height:100%;overflow:hidden;overscroll-behavior:none}.app{height:100vh;height:100dvh;min-height:0}.content{height:100%;overflow-y:auto;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch}}
 .side{display:none}
 .content{flex:1;min-width:0;padding:16px 16px calc(84px + env(safe-area-inset-bottom));max-width:1080px;margin:0 auto;width:100%}
 .view{animation:viewIn .32s var(--ease) both}
@@ -530,8 +531,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <div id="toasts"></div>
 <script>
 {
-const APP_VERSION = "0.12.9";
+const APP_VERSION = "0.13.0";
 const CHANGELOG = [
+  "0.13.0 phone: Settings in the tab bar, tab bar stays put when you scroll; colors, theme, backdrop and name sync between devices; goals start folded",
   "0.12.9 wishlist: each item can list words the product title must include and words to leave out, so description searches (a climbing backpack, a harness) keep the right products",
   "0.12.8 price bot: 250 searches a month (the SerpApi free plan), split evenly across the days left in the month (about 8 a day); unused ones roll forward",
   "0.12.7 dates: the wishlist has a Need by button that opens a calendar to pick the day (no typing), and tapping an item's date opens the calendar to change it. Clicking any date box in the app opens its calendar",
@@ -764,7 +766,7 @@ async function pull(full = false) {
     let rows;
     if (isSupa(SYNC.cfg)) { const q = (!full && DB.cursor) ? `&updated_at=gt.${encodeURIComponent(DB.cursor)}` : ""; rows = await (await supa(`hub_docs?select=id,data,updated_at&order=updated_at.asc${q}`)).json(); }
     else { const since = !full && DB.cursor ? new Date(Date.parse(DB.cursor) - 2000).toISOString() : ""; rows = await api("GET", since ? "?since=" + encodeURIComponent(since) : ""); }
-    let changed = false;
+    let changed = false, prefsChanged = false;
     for (const row of rows) {
       seen.add(row.id);
       if (row.updated_at > (DB.cursor || "")) DB.cursor = row.updated_at;
@@ -778,9 +780,10 @@ async function pull(full = false) {
       if (cur && JSON.stringify(cur.data) === JSON.stringify(row.data)) continue;
       if (row.id.startsWith("pricehist:") && cur?.data?.points) row.data.points = unionPts(cur.data.points, row.data.points);
       DB.docs[row.id] = { data: row.data, at: Date.parse(row.updated_at) }; changed = true;
+      if (row.id === "settings:prefs") prefsChanged = true;
       if (row.id.startsWith("price:")) recordPrice(row.id.slice(6), row.data);
     }
-    persist(); SYNC.lastPull = new Date();
+    persist(); SYNC.lastPull = new Date(); if (prefsChanged) applyTheme(); seedPrefs();
     setSync("ok", "Synced " + SYNC.lastPull.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
     if (changed && !document.querySelector(".dragging") && !document.activeElement?.isContentEditable && !document.activeElement?.closest?.(".rcp")) render();
   } catch (e) { setSync("bad", "Sync failed: " + e.message); }
@@ -1017,7 +1020,7 @@ const fmtNum = n => Number(n || 0).toLocaleString(undefined, { maximumFractionDi
 const goalMeta = g => { const { t, d } = subStats(g), pace = paceText(g); return `${g.target ? `${fmtNum(g.current)} / ${fmtNum(g.target)}${g.unit ? " " + esc(g.unit) : ""}` : t ? `${d}/${t} steps` : g.done ? "done" : "in progress"}${g.target && t ? ` · ${d}/${t} steps` : ""}${g.due && !g.done ? ` · ${relDay(g.due)}` : ""}${pace ? " · " + pace : ""}`; };
 const subRow = (x, depth = 0) => { const ev = stepEvent(x.id), dn = subDone(x); return `<div class="sub${dn ? " done" : ""}${!depth && x.kids?.length && FOLDS()["s:" + x.id] ? " folded" : ""}" data-sub="${x.id}"><span class="grip">${I.grip}</span>${!depth && x.kids?.length ? `<button class="fold" data-act="sfold" title="Show or hide sub-steps"><svg class="ic" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>` : ""}<button class="chk" role="checkbox" aria-checked="${dn}" data-act="stick">${I.check}</button><span class="st ren" contenteditable="true" spellcheck="false" data-act="stext" title="Tap to rename">${esc(x.text)}</span>${ev ? `<span class="schip" data-act="sopen" title="Open the event">${I.cal} ${ev.date === today() ? "today" : fmtDate(ev.date, { weekday: "short", day: "numeric" })}</span>` : ""}${x.due ? dueInput("sdue", x.due, dn) : ""}<span class="sfill"></span>${x.url ? `<a class="sb" href="${esc(x.url)}" target="_blank" rel="noopener" title="Open the link">↗</a>` : ""}${x.due ? "" : `<button class="sb" data-act="sdueadd" title="Add a due date">📅</button>`}${depth ? "" : `<button class="sb" data-act="saddkid" title="Add a sub-step">${I.plus}</button>`}<button class="sb" data-act="snoteadd" title="Note">${I.note}</button>${ev ? "" : `<button class="sb" data-act="ssched" title="Put it on the calendar">${I.cal}</button>`}<button class="x" data-act="sdel" title="Remove">${I.x}</button>${x.note != null ? `<div class="snote" contenteditable="true" data-act="snote">${esc(x.note)}</div>` : ""}${depth ? "" : `<div class="kids"${x.kids?.length ? "" : " hidden"}>${(x.kids || []).map(k => subRow(k, 1)).join("")}<form class="subadd kidadd" data-act="addKid"${x.kids?.length ? " hidden" : ""}><input class="in" placeholder="Add a sub-step…" autocomplete="off"><button class="btn ghost" type="submit">${I.plus}</button></form></div>`}</div>`; };
 const FOLDS = () => lsGet("fold", {});
-const goalRow = (g, big) => `<div class="goal${big ? " gbig" : ""}${big && FOLDS()[g.id] ? " folded" : ""}" data-goal="${g.id}" style="--lc:${g.color || COLORS[0]}"><div class="gh">${big ? `<button class="fold" data-act="gfold" title="Show or hide the steps"><svg class="ic" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>` : ""}${big ? `<button class="gemo" data-act="gemoji" title="Change the icon" aria-label="Change the icon">${g.emoji || "🎯"}</button>` : `<span>${g.emoji || "🎯"}</span>`}<span class="gt${g.done ? " muted" : ""}${big ? " ren" : ""}"${big ? ' contenteditable="true" spellcheck="false" data-act="gtitle" title="Tap to rename"' : ""}>${esc(g.title)}</span><small>${goalMeta(g)}</small>${big && g.due ? dueInput("gdue", g.due, g.done) : ""}</div><div class="gbar"><i class="${g.done ? "done" : ""}" data-w="${goalPct(g) * 100}"></i></div>${big ? `${g.note != null ? `<div class="gnote" contenteditable="true" data-act="gnote">${esc(g.note)}</div>` : ""}${streakRow(g)}<div class="subs">${(g.subs || []).map(x => `${subRow(x)}`).join("")}<form class="subadd" data-act="addSub"><input class="in" placeholder="Add a step…" autocomplete="off"><button class="btn ghost" type="submit">${I.plus}</button></form></div><div class="gctl">${g.target ? `<button class="btn" data-act="gdec">−${fmtNum(g.step || 1)}</button><button class="btn primary" data-act="ginc">+${fmtNum(g.step || 1)}</button>` : ""}${g.daily ? `<button class="btn${(g.log || {})[today()] > 0 ? " primary" : ""}" data-act="gtoday">${(g.log || {})[today()] > 0 ? "✓ Done today" : "Did it today"}</button>` : ""}<button class="btn ghost" data-act="gdone">${g.done ? "Reopen" : "Mark done"}</button><span class="sp"></span>${g.due ? "" : `<button class="btn ghost icon" data-act="gdueadd" title="Add a due date">📅</button>`}${g.note == null ? `<button class="btn ghost icon" data-act="gnoteadd" title="Add a note">${I.note}</button>` : ""}<button class="btn ghost icon" data-act="gedit">${I.edit}</button></div>` : ""}</div>`;
+const goalRow = (g, big) => `<div class="goal${big ? " gbig" : ""}${big && !FOLDS()["o:" + g.id] ? " folded" : ""}" data-goal="${g.id}" style="--lc:${g.color || COLORS[0]}"><div class="gh">${big ? `<button class="fold" data-act="gfold" title="Show or hide the steps"><svg class="ic" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>` : ""}${big ? `<button class="gemo" data-act="gemoji" title="Change the icon" aria-label="Change the icon">${g.emoji || "🎯"}</button>` : `<span>${g.emoji || "🎯"}</span>`}<span class="gt${g.done ? " muted" : ""}${big ? " ren" : ""}"${big ? ' contenteditable="true" spellcheck="false" data-act="gtitle" title="Tap to rename"' : ""}>${esc(g.title)}</span><small>${goalMeta(g)}</small>${big && g.due ? dueInput("gdue", g.due, g.done) : ""}</div><div class="gbar"><i class="${g.done ? "done" : ""}" data-w="${goalPct(g) * 100}"></i></div>${big ? `${g.note != null ? `<div class="gnote" contenteditable="true" data-act="gnote">${esc(g.note)}</div>` : ""}${streakRow(g)}<div class="subs">${(g.subs || []).map(x => `${subRow(x)}`).join("")}<form class="subadd" data-act="addSub"><input class="in" placeholder="Add a step…" autocomplete="off"><button class="btn ghost" type="submit">${I.plus}</button></form></div><div class="gctl">${g.target ? `<button class="btn" data-act="gdec">−${fmtNum(g.step || 1)}</button><button class="btn primary" data-act="ginc">+${fmtNum(g.step || 1)}</button>` : ""}${g.daily ? `<button class="btn${(g.log || {})[today()] > 0 ? " primary" : ""}" data-act="gtoday">${(g.log || {})[today()] > 0 ? "✓ Done today" : "Did it today"}</button>` : ""}<button class="btn ghost" data-act="gdone">${g.done ? "Reopen" : "Mark done"}</button><span class="sp"></span>${g.due ? "" : `<button class="btn ghost icon" data-act="gdueadd" title="Add a due date">📅</button>`}${g.note == null ? `<button class="btn ghost icon" data-act="gnoteadd" title="Add a note">${I.note}</button>` : ""}<button class="btn ghost icon" data-act="gedit">${I.edit}</button></div>` : ""}</div>`;
 const goalsCard = (max = 3) => { const gs = goals().filter(g => !g.done).slice(0, max), n = goals().length; return `<div class="card tcard" data-go="#goals"><div class="lbl">Goals</div>${gs.map(g => goalRow(g)).join("") || `<div class="muted small" style="padding:8px 0">No goals yet. Tap to add one.</div>`}<div class="small muted" style="margin-top:auto">${n ? `${goals().filter(g => g.done).length}/${n} reached · ` : ""}tap to manage</div></div>`; };
 function refreshGoal(el, g) { const id = el.dataset.goal; el.outerHTML = goalRow({ ...g, id }, true); const ne = $(`[data-goal="${id}"]`, $("#view")); if (ne) { requestAnimationFrame(() => $$(".gbar i[data-w]", ne).forEach(i => i.style.width = i.dataset.w + "%")); initGoalDrag(); } }
 function initGoalDrag() { $$(".gbig .subs,.gbig .kids", $("#view")).forEach(c => dragInit(c, (from, to, row) => { const id = c.closest("[data-goal]").dataset.goal, g = get(id); if (!g) return; const f = findSub(g, row.dataset.sub); if (!f) return; const [x] = f.arr.splice(from, 1); f.arr.splice(to, 0, x); put(id, g, { quiet: true }); }, ".sub")); dragInit($("#goalRows"), () => reorderGoals($("#goalRows")), ".gbig"); }
@@ -1088,7 +1091,16 @@ function trainingCard() {
 }
 
 /* ---------- views ---------- */
-const PREF = () => lsGet("pref", {});
+const SYNCED_PREFS = ["accent", "backdrop", "bgIntensity", "bgBlur", "sideArt", "name", "appName", "tileOrder", "swapCols", "theme"];
+const PREF = () => { const l = lsGet("pref", {}), s = get("settings:prefs") || {}, p = { ...l, ...s }, img = lsGet("bgimg", null); if (l.backdrop === "photo" && img) p.backdrop = "photo"; else if (p.backdrop === "photo" && !img) p.backdrop = "dots"; return p; };
+function setPref(o) {
+  lsSet("pref", { ...lsGet("pref", {}), ...o });
+  const sy = {}; for (const k of SYNCED_PREFS) if (k in o && !(k === "backdrop" && o[k] === "photo")) sy[k] = o[k];
+  if (Object.keys(sy).length) put("settings:prefs", { ...(get("settings:prefs") || {}), ...sy }, { quiet: true });
+}
+const themePref = () => PREF().theme || lsGet("theme", "system");
+const setTheme = v => { lsSet("theme", v); setPref({ theme: v }); };
+function seedPrefs() { if (DB.docs["settings:prefs"]) return; const l = { ...lsGet("pref", {}) }, t = lsGet("theme", null); if (t) l.theme = t; const sy = {}; for (const k of SYNCED_PREFS) if (k in l && !(k === "backdrop" && l[k] === "photo")) sy[k] = l[k]; if (Object.keys(sy).length) put("settings:prefs", sy, { quiet: true }); }
 const V = {};
 V.goals = goalsView;
 V.glance = () => {
@@ -1558,7 +1570,7 @@ function listStyleForm(id) {
   });
 }
 V.settings = () => {
-  const c = SYNC.cfg || {}, pb = get("settings:pricebot") || {}, theme = lsGet("theme", "system"), meta = get("meta:pricebot"), p = PREF();
+  const c = SYNC.cfg || {}, pb = get("settings:pricebot") || {}, theme = themePref(), meta = get("meta:pricebot"), p = PREF();
   return `${topbar("Settings")}<div class="settings">
   <div class="card"><h3>You</h3><label class="field">Name (for the greeting)</label><input class="in" id="pName" value="${esc(p.name || "")}" placeholder="Andrew">
     <label class="field">Accent</label><div class="swatches">${Object.entries(ACCENTS).map(([k, [a]]) => `<div class="sw${(p.accent || "indigo") === k ? " on" : ""}" style="background:${a}" data-accent="${k}" title="${k}"></div>`).join("")}</div>
@@ -1601,7 +1613,7 @@ const DEFAULT_STORES = ["Amazon.com", "Walmart", "Target", "Best Buy", "Costco",
 
 /* ---------- router + render ---------- */
 const TABS = [["dash", "Home", I.grid], ["goals", "Goals", I.target], ["recipes", "Recipes", I.chef], ["wish", "Wishlist", I.cart], ["cal", "Calendar", I.cal], ["settings", "Settings", I.cog]];
-const PHONE_TABS = ["dash", "goals", "recipes", "cal", "wish"];
+const PHONE_TABS = ["dash", "goals", "recipes", "cal", "wish", "settings"];
 const isPhone = () => !matchMedia("(min-width:900px)").matches;
 function buildNav() {
   const mk = ks => TABS.filter(([k]) => !ks || ks.includes(k)).map(([k, t, ic]) => `<a href="#${k}" data-t="${k}">${ic}<span>${t}</span></a>`).join("");
@@ -1623,14 +1635,14 @@ function render() {
   const main = $("#view"); $(".content").classList.toggle("wide", name === "dash"); document.body.classList.toggle("glance", name === "glance"); glanceWake(name === "glance");
   const addIn = $(".addrow input.in", main), keepAdd = addIn && document.activeElement === addIn ? addIn.value : null;
   main.innerHTML = V[name](arg);
-  if (lastView !== name + "/" + arg) { main.classList.remove("view"); main.offsetHeight; main.classList.add("view"); }
+  if (lastView !== name + "/" + arg) { if (lastView && lastView.split("/")[0] !== name) $(".content").scrollTop = 0; main.classList.remove("view"); main.offsetHeight; main.classList.add("view"); }
   lastView = name + "/" + arg;
   if (keepAdd != null) { const i = $(".addrow input.in", main); if (i) { i.value = keepAdd; i.focus(); } }
   if (name === "settings") { const a = (ACCENTS[PREF().accent] || ACCENTS.indigo)[0]; $$("[data-bd]", main).forEach(el => { const k = el.dataset.bd; if (k === "photo") { const img = lsGet("bgimg", null); if (img) el.style.backgroundImage = `url(${img})`; } else { const c = BACKDROPS[k].css(a); Object.assign(el.style, c); if (c.backgroundAttachment) el.style.backgroundAttachment = "scroll"; } }); }
   animateRings(main); requestAnimationFrame(() => $$(".bar i[data-w],.gbar i[data-w]", main).forEach(i => i.style.width = i.dataset.w + "%"));
   if (name === "goals") initGoalDrag();
   if (name === "recipe") $$(".rcp textarea", main).forEach(rGrow);
-  if (name === "dash") dragInit($("#secTiles"), () => lsSet("pref", { ...PREF(), tileOrder: $$("[data-tile]", $("#secTiles")).map(t => t.dataset.tile) }), ".tile");
+  if (name === "dash") dragInit($("#secTiles"), () => setPref({ tileOrder: $$("[data-tile]", $("#secTiles")).map(t => t.dataset.tile) }), ".tile");
   if (name === "wish") dragInit($("#wishes"), () => { $$("[data-wish]", $("#wishes")).forEach((el, i) => { const w = get(el.dataset.wish); if (w && w.order !== i) { w.order = i; put(el.dataset.wish, w, { quiet: true }); } }); }, ".wish");
   $$(".grid", main).forEach(gr => dragInit(gr, () => { $$(".sq[data-go^='#list/']", gr).forEach((el, i) => { const id = "list:" + el.dataset.go.slice(6), l = get(id); if (l && l.order !== i) { l.order = i; put(id, l, { quiet: true }); } }); }, ".sq[data-go^='#list/']", { grid: true }));
   if (name === "list") dragInit($("#items"), (from, to) => patch("list:" + arg, l => { const [it] = l.items.splice(from, 1); l.items.splice(to, 0, it); }, { quiet: true }));
@@ -1688,7 +1700,7 @@ document.addEventListener("click", async e => {
   let t = e.target.closest("[data-act]"), act = t?.dataset.act; const { arg } = route();
   if (!act && e.target.closest(".item") && !e.target.closest(".txt,.grip,.x,.sb,.inote")) { t = $(".chk", e.target.closest(".item")); act = "tick"; }
   if (!act && e.target.closest(".wish .head")) { t = e.target.closest(".wish"); act = "wopen"; }
-  if (act === "toggleTheme") { const cur = lsGet("theme", "system"), isDark = document.documentElement.dataset.theme === "dark" || (cur === "system" && matchMedia("(prefers-color-scheme: dark)").matches); lsSet("theme", isDark ? "light" : "dark"); applyTheme(); return; }
+  if (act === "toggleTheme") { const cur = themePref(), isDark = document.documentElement.dataset.theme === "dark" || (cur === "system" && matchMedia("(prefers-color-scheme: dark)").matches); setTheme(isDark ? "light" : "dark"); applyTheme(); return; }
   if (!$("#view").contains(e.target) && !$("#fabWrap").contains(e.target)) return;
   if (act === "newlist") { const id = newList("New list"); location.hash = "#list/" + id.slice(5); setTimeout(() => { const i = $(".title-in"); i?.focus(); i?.select(); }, 60); return; }
   if (act === "editList") { listStyleForm("list:" + arg); return; }
@@ -1746,12 +1758,12 @@ document.addEventListener("click", async e => {
   if (act === "pushTest") { api("POST", "/../push/test").then(r => toast(r.sent ? `Sent to ${r.sent} device${r.sent === 1 ? "" : "s"}` : "Nothing sent: " + (r.error || "no subscribers"), 5000)).catch(e => toast("Test failed: " + e.message, 5000)); return; }
   if (act === "notifTest") { if (Notification?.permission !== "granted") return toast("Enable them first"); try { new Notification("Hub", { body: "Reminders work here." }); } catch { navigator.serviceWorker?.ready.then(r => r.showNotification("Hub", { body: "Reminders work here." })); } return; }
   if (act === "savePb") { put("settings:pricebot", { tax_pct: Number($("#pbTax").value) || 0, recheck_minutes: Math.max(15, Number($("#pbMin").value) || 1440), monthly_budget: Math.min(250, Math.max(1, Number($("#pbBudget").value) || 250)), max_per_run: Math.max(1, Number($("#pbPerRun").value) || 3), stores: $("#pbStores").value.split("\n").map(s => s.trim()).filter(Boolean) }); toast("Saved"); return; }
-  if (act === "savePref") { lsSet("pref", { ...PREF(), name: $("#pName").value.trim(), appName: $("#pApp").value.trim() }); applyTheme(); toast("Saved"); return; }
+  if (act === "savePref") { setPref({ name: $("#pName").value.trim(), appName: $("#pApp").value.trim() }); applyTheme(); toast("Saved"); return; }
   const bd = e.target.closest("[data-bd]");
-  if (bd) { const k = bd.dataset.bd; if (k === "photo" && !lsGet("bgimg", null)) { pickPhoto(); return; } lsSet("pref", { ...PREF(), backdrop: k }); applyTheme(); $$("[data-bd]").forEach(x => x.classList.toggle("on", x === bd)); $("#photoOpts").style.display = k === "photo" ? "block" : "none"; return; }
+  if (bd) { const k = bd.dataset.bd; if (k === "photo" && !lsGet("bgimg", null)) { pickPhoto(); return; } setPref({ backdrop: k }); applyTheme(); $$("[data-bd]").forEach(x => x.classList.toggle("on", x === bd)); $("#photoOpts").style.display = k === "photo" ? "block" : "none"; return; }
   if (act === "photoPick") { pickPhoto(); return; }
-  if (act === "photoRemove") { try { localStorage.removeItem("hub:bgimg"); } catch {} lsSet("pref", { ...PREF(), backdrop: "dots", heroCover: false }); applyTheme(); render(); return; }
-  if (act === "saveV6") { lsSet("pref", { ...PREF(), v6secret: $("#v6Secret").value.trim(), v6url: $("#v6Url").value.trim(), v6sbUrl: $("#v6SbUrl").value.trim().replace(/\/+$/, ""), v6sbKey: $("#v6SbKey").value.trim() }); toast("Saved, fetching…"); fetchV6().then(() => { render(); toast(V6.data ? "V6 connected ✓" : "No summary found yet" + (V6.err ? ": " + V6.err : ""), 4000); }); return; }
+  if (act === "photoRemove") { try { localStorage.removeItem("hub:bgimg"); } catch {} setPref({ backdrop: "dots", heroCover: false }); applyTheme(); render(); return; }
+  if (act === "saveV6") { setPref({ v6secret: $("#v6Secret").value.trim(), v6url: $("#v6Url").value.trim(), v6sbUrl: $("#v6SbUrl").value.trim().replace(/\/+$/, ""), v6sbKey: $("#v6SbKey").value.trim() }); toast("Saved, fetching…"); fetchV6().then(() => { render(); toast(V6.data ? "V6 connected ✓" : "No summary found yet" + (V6.err ? ": " + V6.err : ""), 4000); }); return; }
   if (act === "bakNow") { snapshot("manual"); render(); toast("Backed up"); return; }
   if (act === "bakRestore") { const b = lsGet("bak", [])[+t.dataset.i]; if (!b) return; if (await ask("Restore this backup?", "Replaces the data on this device with the backup and syncs it up. The current data is backed up first.", "Restore")) { snapshot("before restore"); DB.docs = b.docs; Object.keys(DB.docs).forEach(id => DB.pending.add(id)); persist(); schedulePush(); render(); toast("Restored"); } return; }
   if (act === "gdone" || act === "ginc" || act === "gdec" || act === "gtoday") {
@@ -1762,7 +1774,7 @@ document.addEventListener("click", async e => {
     else { const st = (act === "ginc" ? 1 : -1) * (Number(g.step) || 1); g.current = Math.max(0, (Number(g.current) || 0) + st); if (g.daily) { g.log[td] = Math.max(0, (g.log[td] || 0) + st); if (!g.log[td]) delete g.log[td]; } if (g.target && g.current >= g.target && !g.done) { g.done = true; const r = t.getBoundingClientRect(); confetti(r.left + 20, r.top + 10); toast("🎯 Goal reached!"); } }
     g.doneAt = g.done ? Date.now() : null; put(id, g, { quiet: true }); if (el.classList.contains("gbig")) { if (act === "gdone" && route().name === "goals") { render(); toast(g.done ? "Moved to Completed" : "Back in active goals"); return; } refreshGoal(el, g); } else updateGoalRow(el, g); setRing($("#view .topbar .ring"), goals().filter(x => x.done).length, goals().length); const sub = $("#view .topbar .sub"); if (sub) sub.textContent = `${goals().filter(x => !x.done).length} active`; return;
   }
-  if (act === "gfold" || act === "sfold") { const el = act === "gfold" ? t.closest("[data-goal]") : t.closest("[data-sub]"), key = act === "gfold" ? el.dataset.goal : "s:" + el.dataset.sub, f = FOLDS(); if (f[key]) delete f[key]; else f[key] = true; lsSet("fold", f); el.classList.toggle("folded", !!f[key]); return; }
+  if (act === "gfold" || act === "sfold") { const el = act === "gfold" ? t.closest("[data-goal]") : t.closest("[data-sub]"), key = act === "gfold" ? "o:" + el.dataset.goal : "s:" + el.dataset.sub, f = FOLDS(); if (f[key]) delete f[key]; else f[key] = true; lsSet("fold", f); el.classList.toggle("folded", act === "gfold" ? !f[key] : !!f[key]); return; }
   if (act === "gnoteadd") { const el = t.closest("[data-goal]"), g = get(el.dataset.goal); if (!g) return; g.note = ""; put(el.dataset.goal, g, { quiet: true }); refreshGoal(el, g); $(".gnote", $(`[data-goal="${el.dataset.goal}"]`))?.focus(); return; }
   if (act === "gnote" || act === "snote" || act === "inote") return;
   if (act === "gtitle" || act === "stext" || act === "wname") return;
@@ -1782,11 +1794,11 @@ document.addEventListener("click", async e => {
     put(id, g, { quiet: true }); updateGoalRow(el, g); return;
   }
   if (act === "evstep") { const evid = t.closest("[data-ev]").dataset.ev, ev = get(evid); if (!ev?.stepRef) return; const g = get(ev.goalRef); const f = g && findSub(g, ev.stepRef); if (!f) return toast("That step is gone"); f.x.done = !f.x.done; f.x.doneAt = f.x.done ? Date.now() : null; put(ev.goalRef, g, { quiet: true }); t.setAttribute("aria-checked", f.x.done); t.closest("[data-ev]").classList.toggle("done", f.x.done); return; }
-  if (act === "theme") { lsSet("theme", t.dataset.v); applyTheme(); render(); return; }
+  if (act === "theme") { setTheme(t.dataset.v); applyTheme(); render(); return; }
   if (act === "export") { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify({ version: APP_VERSION, docs: DB.docs }, null, 1)], { type: "application/json" })); a.download = "hub-" + today() + ".json"; a.click(); return; }
   if (act === "import") { const i = document.createElement("input"); i.type = "file"; i.accept = ".json"; i.onchange = async () => { try { const j = JSON.parse(await i.files[0].text()); let n = 0; for (const [id, d] of Object.entries(j.docs || {})) { put(id, d.data, { quiet: true }); n++; } render(); toast("Imported " + n + " records"); } catch (err) { toast("Import failed: " + err.message); } }; i.click(); return; }
   if (act === "wipe") { if (await ask("Wipe this device?", "Removes all Hub data from this browser. Synced data stays on the server.", "Wipe")) { localStorage.clear(); location.reload(); } return; }
-  const acc = e.target.closest("[data-accent]"); if (acc) { lsSet("pref", { ...PREF(), accent: acc.dataset.accent }); applyTheme(); $$("[data-accent]").forEach(x => x.classList.toggle("on", x === acc)); return; }
+  const acc = e.target.closest("[data-accent]"); if (acc) { setPref({ accent: acc.dataset.accent }); applyTheme(); $$("[data-accent]").forEach(x => x.classList.toggle("on", x === acc)); return; }
   if (act) return;
   const tc = e.target.closest("#trainCard"); if (tc && !e.target.closest("a")) { open(tc.dataset.href, "_blank", "noopener"); return; }
   const evr = e.target.closest("[data-ev]"); if (evr) { const du = dueOf(evr.dataset.ev); if (du) { location.hash = du.go; return; } eventForm({ id: evr.dataset.ev, ...get(evr.dataset.ev) }); return; }
@@ -1795,14 +1807,14 @@ document.addEventListener("click", async e => {
 });
 function pickPhoto() {
   const i = document.createElement("input"); i.type = "file"; i.accept = "image/*";
-  i.onchange = async () => { try { const data = await loadPhoto(i.files[0]); if (data.length > 4.5e6) return toast("That photo is too large even after resizing"); lsSet("bgimg", data); lsSet("pref", { ...PREF(), backdrop: "photo" }); applyTheme(); render(); toast("Photo set"); } catch { toast("Could not read that image"); } };
+  i.onchange = async () => { try { const data = await loadPhoto(i.files[0]); if (data.length > 4.5e6) return toast("That photo is too large even after resizing"); lsSet("bgimg", data); setPref({ backdrop: "photo" }); applyTheme(); render(); toast("Photo set"); } catch { toast("Could not read that image"); } };
   i.click();
 }
 $("#view").addEventListener("change", e => {
   const { arg } = route(), t = e.target;
   if (t.id === "budgetIn") { put("settings:budget", { ...(get("settings:budget") || {}), monthly: Number(t.value) || 0 }, { quiet: true }); render(); return; }
-  if (t.id === "swapCols") { lsSet("pref", { ...PREF(), swapCols: t.checked }); toast("Saved"); return; }
-  if (t.id === "bgInt" || t.id === "bgBlur" || t.id === "heroCover" || t.id === "sideArt") { lsSet("pref", { ...PREF(), bgIntensity: +$("#bgInt").value, bgBlur: $("#bgBlur").checked, heroCover: $("#heroCover").checked, sideArt: $("#sideArt").checked }); applyTheme(); return; }
+  if (t.id === "swapCols") { setPref({ swapCols: t.checked }); toast("Saved"); return; }
+  if (t.id === "bgInt" || t.id === "bgBlur" || t.id === "heroCover" || t.id === "sideArt") { setPref({ bgIntensity: +$("#bgInt").value, bgBlur: $("#bgBlur").checked, heroCover: $("#heroCover").checked, sideArt: $("#sideArt").checked }); applyTheme(); return; }
   if (t.dataset.act === "gdue") { const el = t.closest("[data-goal]"), id = el.dataset.goal, g = get(id); if (!g) return; if (t.value) g.due = t.value; else delete g.due; put(id, g, { quiet: true }); refreshGoal(el, g); return; }
   if (t.dataset.act === "ldue") { patch("list:" + arg, l => { if (t.value) l.due = t.value; else delete l.due; }, { quiet: true }); render(); return; }
   if (t.dataset.act === "idue") { const row = t.closest("[data-item]"), iid = row.dataset.item, lid = "list:" + arg; patch(lid, l => { const it = l.items.find(i => i.id === iid); if (it) { if (t.value) it.due = t.value; else delete it.due; } }, { quiet: true }); const it = get(lid)?.items.find(i => i.id === iid); if (it) row.outerHTML = itemRow(it); return; }
@@ -1851,6 +1863,7 @@ $("#view").addEventListener("submit", e => {
   }
   if (f.dataset.act === "addGoal") {
     const tgt = $("input[type=number]", f)?.value, id = "goal:" + uid();
+    { const f0 = FOLDS(); f0["o:" + id] = true; lsSet("fold", f0); }
     put(id, { title: v, emoji: "🎯", target: tgt ? Number(tgt) : "", current: 0, unit: "", step: 1, due: "", color: COLORS[goals().length % COLORS.length], done: false, created: Date.now() }, { quiet: true });
     render(); $(`[data-goal="${id}"]`)?.classList.add("in"); $(".addrow input.in", $("#view"))?.focus();
   }
@@ -1936,7 +1949,7 @@ function dayModal(d) {
 
 /* ---------- boot ---------- */
 function applyTheme() {
-  const t = lsGet("theme", "system"); if (t === "system") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
+  const t = themePref(); if (t === "system") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
   const [a, a2] = ACCENTS[PREF().accent] || ACCENTS.indigo; const r = document.documentElement.style;
   r.setProperty("--accent", a); r.setProperty("--accent-2", a2); r.setProperty("--accent-soft", a + "1f"); r.setProperty("--accent-glow", a + "59");
   const isDark = t === "dark" || (t === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
