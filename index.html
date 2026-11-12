@@ -73,6 +73,12 @@ textarea{resize:vertical;min-height:60px}
 
 /* ---------- layout ---------- */
 .app{display:flex;min-height:100vh}
+@media (max-width:640px){.content{padding:10px 12px calc(84px + env(safe-area-inset-bottom))}section{margin-bottom:16px}.card{padding:12px}.sec-h{margin-bottom:8px}.sec-h h2{font-size:15px}
+  .hero.mini{padding:12px 14px;gap:10px;margin-bottom:12px;border-radius:16px}.hero.mini .greet{font-size:16px}.hero.mini .date{font-size:12px;margin-top:2px;opacity:.9}.hero.mini .ring{width:52px;height:52px}.hero.mini::before{display:none}
+  .focus{margin-bottom:12px}.tcard{min-height:0;gap:6px}.tiles{gap:8px}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.grid .sq{aspect-ratio:auto;min-height:104px;padding:10px}
+  .agenda .dh{margin:10px 0 4px}.fslot.empty~.fslot.empty{display:none}.fslot.empty{padding:8px;margin:2px 0}.tcard.train{min-height:0}}
+.gbig.folded .gctl,.gbig.folded .gnote,.gbig.folded .streak{display:none}
 @media (max-width:899px){html,body{height:100%;overflow:hidden;overscroll-behavior:none}.app{height:100vh;height:100dvh;min-height:0}.content{height:100%;overflow-y:auto;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch}}
 .side{display:none}
 .content{flex:1;min-width:0;padding:16px 16px calc(84px + env(safe-area-inset-bottom));max-width:1080px;margin:0 auto;width:100%}
@@ -531,8 +537,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <div id="toasts"></div>
 <script>
 {
-const APP_VERSION = "0.13.0";
+const APP_VERSION = "0.13.1";
 const CHANGELOG = [
+  "0.13.1 phone Home redesigned compact: small greeting bar, tighter cards, week before wishlist, two-column lists; Sections tiles gone (they are in the tab bar)",
   "0.13.0 phone: Settings in the tab bar, tab bar stays put when you scroll; colors, theme, backdrop and name sync between devices; goals start folded",
   "0.12.9 wishlist: each item can list words the product title must include and words to leave out, so description searches (a climbing backpack, a harness) keep the right products",
   "0.12.8 price bot: 250 searches a month (the SerpApi free plan), split evenly across the days left in the month (about 8 a day); unused ones roll forward",
@@ -1146,7 +1153,8 @@ V.dash = () => {
   }
   const nextDue = w.filter(i => !i.done && i.by)[0], nextEv = up[0];
   const listsSec = `<section><div class="sec-h"><h2>Lists</h2><span class="n">${done}/${tot} done</span><span class="sp"></span><button class="btn ghost" data-go="#lists">Completed ${I.chev}</button></div><div class="grid">${ls.map(listCard).join("")}<div class="card sq add" style="--i:${ls.length}" data-act="newlist">${I.plus}New list</div></div></section>`;
-  return hero + focusCard() + `<section><div class="tiles">${trainingCard()}${goalsCard()}</div></section><section>${wishCard(w)}</section>` + listsSec + todayCard + `<section><div class="sec-h"><h2>Sections</h2><span class="n">hold a tile to reorder</span></div><div class="tiles" id="secTiles">${tileOrder().map(k => TILES[k]({ ls, tot, done, w, wd, nextDue, nextEv })).join("")}</div></section>`;
+  const heroMini = `<div class="hero mini${cover ? " cover" : ""}"${cover ? ` style="background-image:url(${cover})"` : ""}>${cover ? '<div class="coverlay"></div>' : ""}<div class="sp" style="min-width:0"><div class="greet">${greet}${name ? ", " + esc(name) : ""} ${seasonEmoji()}</div><div class="date">${new Date().toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })} · ${tod.length} today · ${tot - done} open · ${w.length - wd} to buy</div></div><a class="btn ghost icon" href="#glance" style="color:#fff" title="Glance screen">${I.glance}</a>${ring(done, tot, 56)}</div>`;
+  return heroMini + focusCard() + `<section><div class="tiles">${trainingCard()}${goalsCard(5)}</div></section>` + todayCard + `<section>${wishCard(w)}</section>` + listsSec;
 };
 const TILE_KEYS = ["recipes", "cal", "glance", "settings"];
 const tileOrder = () => { const o = (PREF().tileOrder || []).filter(k => TILE_KEYS.includes(k)); return o.concat(TILE_KEYS.filter(k => !o.includes(k))); };
@@ -1642,7 +1650,7 @@ function render() {
   animateRings(main); requestAnimationFrame(() => $$(".bar i[data-w],.gbar i[data-w]", main).forEach(i => i.style.width = i.dataset.w + "%"));
   if (name === "goals") initGoalDrag();
   if (name === "recipe") $$(".rcp textarea", main).forEach(rGrow);
-  if (name === "dash") dragInit($("#secTiles"), () => setPref({ tileOrder: $$("[data-tile]", $("#secTiles")).map(t => t.dataset.tile) }), ".tile");
+  if (name === "dash" && $("#secTiles")) dragInit($("#secTiles"), () => setPref({ tileOrder: $$("[data-tile]", $("#secTiles")).map(t => t.dataset.tile) }), ".tile");
   if (name === "wish") dragInit($("#wishes"), () => { $$("[data-wish]", $("#wishes")).forEach((el, i) => { const w = get(el.dataset.wish); if (w && w.order !== i) { w.order = i; put(el.dataset.wish, w, { quiet: true }); } }); }, ".wish");
   $$(".grid", main).forEach(gr => dragInit(gr, () => { $$(".sq[data-go^='#list/']", gr).forEach((el, i) => { const id = "list:" + el.dataset.go.slice(6), l = get(id); if (l && l.order !== i) { l.order = i; put(id, l, { quiet: true }); } }); }, ".sq[data-go^='#list/']", { grid: true }));
   if (name === "list") dragInit($("#items"), (from, to) => patch("list:" + arg, l => { const [it] = l.items.splice(from, 1); l.items.splice(to, 0, it); }, { quiet: true }));
