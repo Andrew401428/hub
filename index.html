@@ -537,8 +537,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <div id="toasts"></div>
 <script>
 {
-const APP_VERSION = "0.14.1";
+const APP_VERSION = "0.14.2";
 const CHANGELOG = [
+  "0.14.2 wishlist items and Today's focus picks also slide to the bottom when checked",
   "0.14.1 checked list items and goal steps slide to the bottom; unchecking brings them back up above the checked ones",
   "0.14.0 notifications: one daily goal summary push (time in Settings > Reminders), each goal can be daily, weekly, only when due, or never; shifts remind 1 hour before",
   "0.13.1 phone Home redesigned compact: small greeting bar, tighter cards, week before wishlist, two-column lists; Sections tiles gone (they are in the tab bar)",
@@ -1032,7 +1033,7 @@ const FOLDS = () => lsGet("fold", {});
 const doneLast = (arr, isDone = x => !!x.done) => [...arr].sort((a, b) => isDone(a) - isDone(b));
 function sinkArr(arr, x, isDone = y => !!y.done) { const i = arr.indexOf(x); if (i < 0) return; arr.splice(i, 1); if (isDone(x)) arr.push(x); else { const j = arr.findIndex(isDone); arr.splice(j < 0 ? arr.length : j, 0, x); } }
 function sinkRow(row) {
-  const box = row && row.parentElement; if (!box) return; const cls = row.classList.contains("sub") ? "sub" : "item", sibs = [...box.children].filter(c => c !== row && c.classList.contains(cls));
+  const box = row && row.parentElement; if (!box) return; const cls = ["sub", "item", "wish", "hw", "fslot"].find(c => row.classList.contains(c)) || "item", sibs = [...box.children].filter(c => c !== row && c.classList.contains(cls) && !c.classList.contains("empty"));
   const before = row.getBoundingClientRect().top;
   if (row.classList.contains("done")) { const last = sibs[sibs.length - 1]; if (last) last.after(row); }
   else { const fd = sibs.find(c => c.classList.contains("done")); if (fd) fd.before(row); else if (sibs.length) sibs[sibs.length - 1].after(row); }
@@ -1344,7 +1345,7 @@ function focusResolve(pk) {
 }
 function focusCard() {
   const picks = focusPicks(), slots = [];
-  picks.forEach((pk, i) => { const r = focusResolve(pk); if (!r) return; slots.push(`<div class="fslot${r.done ? " done" : ""}" data-fi="${i}"><button class="chk" role="checkbox" aria-checked="${r.done}" data-act="focusTick">${I.check}</button><div class="ft">${esc(r.text)}<small>${esc(r.src)}</small></div><button class="x" data-act="focusDel" title="Remove">${I.x}</button></div>`); });
+  picks.map((pk, i) => [pk, i, focusResolve(pk)]).sort((a, b) => !!a[2]?.done - !!b[2]?.done).forEach(([pk, i, r]) => { if (!r) return; slots.push(`<div class="fslot${r.done ? " done" : ""}" data-fi="${i}"><button class="chk" role="checkbox" aria-checked="${r.done}" data-act="focusTick">${I.check}</button><div class="ft">${esc(r.text)}<small>${esc(r.src)}</small></div><button class="x" data-act="focusDel" title="Remove">${I.x}</button></div>`); });
   for (let i = slots.length; i < 3; i++) slots.push(`<div class="fslot empty" data-act="focusPick">${I.plus} ${i === 0 ? "Pick today's first thing" : "Pick another"}</div>`);
   const dn = picks.map(focusResolve).filter(Boolean), nd = dn.filter(x => x.done).length;
   return `<section class="focus"><div class="fh"><span class="lbl">Today's focus</span><span class="small muted">${dn.length ? `${nd}/${dn.length} done` : "three things, cleared at midnight"}</span><span class="sp"></span>${dn.length ? `<button class="btn ghost" data-act="focusPick" style="padding:4px 8px">${I.plus}</button>` : ""}</div><div class="card" style="padding:6px 10px">${slots.join("")}</div></section>`;
@@ -1743,7 +1744,7 @@ document.addEventListener("click", async e => {
   if (act === "wtick") {
     const row = t.closest("[data-wish]"), id = row.dataset.wish, w = get(id); if (!w) return;
     w.done = !w.done; w.doneAt = w.done ? Date.now() : null; put(id, w, { quiet: true });
-    row.classList.toggle("done", w.done); t.setAttribute("aria-checked", w.done); updateWishHeader();
+    row.classList.toggle("done", w.done); t.setAttribute("aria-checked", w.done); updateWishHeader(); if (!row.classList.contains("hw")) setTimeout(() => sinkRow(row), 260);
     if (w.done) { const r = t.getBoundingClientRect(); confetti(r.left + 12, r.top + 12, ["#f59e0b", "#22c55e", "#3b82f6"]); }
     return;
   }
@@ -1767,7 +1768,7 @@ document.addEventListener("click", async e => {
     const pk = focusPicks()[+t.closest("[data-fi]").dataset.fi]; if (!pk) return;
     if (pk.kind === "step") { const g = get(pk.goal), f = g && findSub(g, pk.sub); if (!f) return; const to = !subDone(f.x); if (f.x.kids?.length) f.x.kids.forEach(k => { k.done = to; k.doneAt = to ? Date.now() : null; }); else { f.x.done = to; f.x.doneAt = to ? Date.now() : null; } const { t: tt, d } = subStats(g); if (!g.target && tt && d === tt && !g.done) { g.done = true; g.doneAt = Date.now(); } put(pk.goal, g, { quiet: true }); }
     else { const l = get(pk.list), it = l && l.items.find(i => i.id === pk.item); if (!it) return; it.done = !it.done; it.doneAt = it.done ? Date.now() : null; put(pk.list, l, { quiet: true }); }
-    const row = t.closest(".fslot"), on = t.getAttribute("aria-checked") !== "true"; row.classList.toggle("done", on); t.setAttribute("aria-checked", on);
+    const row = t.closest(".fslot"), on = t.getAttribute("aria-checked") !== "true"; row.classList.toggle("done", on); t.setAttribute("aria-checked", on); setTimeout(() => sinkRow(row), 260);
     if (on && focusPicks().map(focusResolve).filter(Boolean).every(x => x.done)) { const r = t.getBoundingClientRect(); confetti(r.left + 10, r.top + 10); toast("🎯 Focus done for today"); }
     const hd = $(".focus .fh .small"); if (hd) { const dn = focusPicks().map(focusResolve).filter(Boolean); hd.textContent = `${dn.filter(x => x.done).length}/${dn.length} done`; } return;
   }
