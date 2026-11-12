@@ -537,8 +537,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <div id="toasts"></div>
 <script>
 {
-const APP_VERSION = "0.13.1";
+const APP_VERSION = "0.14.0";
 const CHANGELOG = [
+  "0.14.0 notifications: one daily goal summary push (time in Settings > Reminders), each goal can be daily, weekly, only when due, or never; shifts remind 1 hour before",
   "0.13.1 phone Home redesigned compact: small greeting bar, tighter cards, week before wishlist, two-column lists; Sections tiles gone (they are in the tab bar)",
   "0.13.0 phone: Settings in the tab bar, tab bar stays put when you scroll; colors, theme, backdrop and name sync between devices; goals start folded",
   "0.12.9 wishlist: each item can list words the product title must include and words to leave out, so description searches (a climbing backpack, a harness) keep the right products",
@@ -1052,6 +1053,7 @@ function goalForm(g = {}) {
     <label class="field">Icon</label>${emojiPicker(v.emoji)}
     <label class="field">Color</label><div class="swatches">${COLORS.map(c => `<div class="sw${v.color === c ? " on" : ""}" style="background:${c}" data-c="${c}"></div>`).join("")}</div>
     <label class="field">Notes</label><textarea name="note" rows="2" placeholder="links, details, why it matters">${esc(v.note || "")}</textarea>
+    <label class="field">Notify me</label><select name="notify">${[["daily", "In the daily summary"], ["weekly", "Weekly (Monday summary)"], ["due", "Only when something is due soon"], ["off", "Never"]].map(([k, t]) => `<option value="${k}"${(v.notify || "daily") === k ? " selected" : ""}>${t}</option>`).join("")}</select>
     <label class="row small" style="margin-top:12px"><input type="checkbox" name="daily"${v.daily ? " checked" : ""}> Track a daily streak (shows the last 30 days and a “Did it today” button)</label>
     <div class="row" style="margin-top:16px">${g.id ? '<button class="btn ghost danger" data-act="gdel">Delete</button>' : ""}<span class="sp"></span><button class="btn ghost" data-act="close">Cancel</button><button class="btn primary" data-act="gsave">Save</button></div>`);
   let color = v.color;
@@ -1293,10 +1295,10 @@ function updateWishHeader() { if (route().name === "dash") { setTimeout(render, 
 const CAL = { view: lsGet("calview", "month"), anchor: today(), dir: "", armed: null };
 const START_H = 6, END_H = 24, HOUR_PX = 48;
 const DEFAULT_PRESETS = [
-  { id: "p1", name: "Open CI", start: "15:45", end: "19:00", loc: "CI", cat: "work", remind: 30 },
-  { id: "p2", name: "Close CI", start: "19:00", end: "23:00", loc: "CI", cat: "work", remind: 30 },
-  { id: "p3", name: "Open FD", start: "15:45", end: "19:00", loc: "FD", cat: "work", remind: 30 },
-  { id: "p4", name: "Close FD", start: "19:00", end: "23:00", loc: "FD", cat: "work", remind: 30 },
+  { id: "p1", name: "Open CI", start: "15:45", end: "19:00", loc: "CI", cat: "work", remind: 60 },
+  { id: "p2", name: "Close CI", start: "19:00", end: "23:00", loc: "CI", cat: "work", remind: 60 },
+  { id: "p3", name: "Open FD", start: "15:45", end: "19:00", loc: "FD", cat: "work", remind: 60 },
+  { id: "p4", name: "Close FD", start: "19:00", end: "23:00", loc: "FD", cat: "work", remind: 60 },
 ];
 const randColor = () => COLORS[Math.floor(Math.random() * 9)];
 const evColor = ev => ev.color || (ev.cat === "work" ? "#f59e0b" : "var(--accent)");
@@ -1490,7 +1492,7 @@ function presetsSheet() {
   });
 }
 function presetForm(p = {}) {
-  const v = { name: "", start: "15:45", end: "19:00", loc: "", cat: "work", remind: 30, color: randColor(), ...p };
+  const v = { name: "", start: "15:45", end: "19:00", loc: "", cat: "work", remind: 60, color: randColor(), ...p };
   const b = sheet(`<h3>${p.id ? "Edit preset" : "New preset"}</h3>
     <label class="field">Name</label><input class="in" name="name" value="${esc(v.name)}" placeholder="Open CI">
     <div class="two"><div><label class="field">Start</label><input class="in" type="time" name="start" value="${v.start}"></div><div><label class="field">End</label><input class="in" type="time" name="end" value="${v.end}"></div></div>
@@ -1605,7 +1607,9 @@ V.settings = () => {
   <div class="card"><h3>Reminders</h3><p class="small muted" style="margin:2px 0 8px">Status: <b>${window.Notification ? Notification.permission : "not supported here"}</b>. On iPhone, notifications only work after adding Hub to the home screen.</p>
     <div class="row"><button class="btn" data-act="notifOn">${I.bell} Enable notifications</button><button class="btn ghost" data-act="notifTest">Test</button></div>
     <p class="small muted" style="margin:14px 0 6px"><b>Push reminders</b> reach this device even when Hub is closed. The sync server sends them every 5 minutes for whatever is due, in this device's time zone (${esc(Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC")}). ${SYNC.cfg && !isSupa(SYNC.cfg) ? "" : "Needs the Cloudflare sync server (connect it above)."}</p>
-    <div class="row wrap"><span class="small" id="pushStatus">${lsGet("pushOn", false) ? "On for this device." : "Off on this device."}</span><span class="sp"></span>${lsGet("pushOn", false) ? `<button class="btn ghost" data-act="pushTest">Send a test push</button><button class="btn ghost danger" data-act="pushOff">Turn off</button>` : `<button class="btn" data-act="pushOn"${SYNC.cfg && !isSupa(SYNC.cfg) ? "" : " disabled"}>${I.bell} Push reminders: turn on</button>`}</div></div>
+    <p class="small muted" style="margin:14px 0 6px"><b>Goal summary:</b> one push a day listing your goals (due-soon steps first). Each goal's edit form picks daily, weekly, only when due, or never. Shifts remind you 1 hour before.</p>
+    <div class="row wrap"><label class="row small"><input type="checkbox" id="digestOn"${(get("settings:notify") || {}).digest === false ? "" : " checked"}> Daily goal summary at</label><input class="in" type="time" id="digestTime" style="width:auto" value="${esc((get("settings:notify") || {}).digestTime || "09:00")}"></div>
+    <div class="row wrap" style="margin-top:10px"><span class="small" id="pushStatus">${lsGet("pushOn", false) ? "On for this device." : "Off on this device."}</span><span class="sp"></span>${lsGet("pushOn", false) ? `<button class="btn ghost" data-act="pushTest">Send a test push</button><button class="btn ghost danger" data-act="pushOff">Turn off</button>` : `<button class="btn" data-act="pushOn"${SYNC.cfg && !isSupa(SYNC.cfg) ? "" : " disabled"}>${I.bell} Push reminders: turn on</button>`}</div></div>
   <div class="card"><h3>Price bot</h3><p class="small muted" style="margin:2px 0 4px">A script (<code>pricebot/price_check.py</code>) runs on a schedule, reads the wishlist from Supabase and writes the cheapest trusted offers back. These settings are read by the bot.${meta?.ran_at ? " Last run " + new Date(meta.ran_at).toLocaleString() + "." : ""}</p>
     <div class="two"><div><label class="field">Sales tax rate (%)</label><input class="in" id="pbTax" type="number" step="0.01" value="${pb.tax_pct ?? 7.5}"></div><div><label class="field">Re-check each item every (minutes)</label><input class="in" id="pbMin" type="number" min="15" step="15" value="${pb.recheck_minutes ?? (pb.recheck_days ? pb.recheck_days * 1440 : 1440)}"></div></div>
     <div class="two"><div><label class="field">Monthly searches (free plan: 250, split evenly across the days)</label><input class="in" id="pbBudget" type="number" min="1" max="250" value="${Math.min(250, pb.monthly_budget ?? 250)}"></div><div><label class="field">Searches per run</label><input class="in" id="pbPerRun" type="number" min="1" value="${pb.max_per_run ?? 3}"></div></div>
@@ -1821,6 +1825,7 @@ function pickPhoto() {
 $("#view").addEventListener("change", e => {
   const { arg } = route(), t = e.target;
   if (t.id === "budgetIn") { put("settings:budget", { ...(get("settings:budget") || {}), monthly: Number(t.value) || 0 }, { quiet: true }); render(); return; }
+  if (t.id === "digestOn" || t.id === "digestTime") { put("settings:notify", { ...(get("settings:notify") || {}), digest: $("#digestOn").checked, digestTime: $("#digestTime").value || "09:00" }, { quiet: true }); toast("Saved"); return; }
   if (t.id === "swapCols") { setPref({ swapCols: t.checked }); toast("Saved"); return; }
   if (t.id === "bgInt" || t.id === "bgBlur" || t.id === "heroCover" || t.id === "sideArt") { setPref({ bgIntensity: +$("#bgInt").value, bgBlur: $("#bgBlur").checked, heroCover: $("#heroCover").checked, sideArt: $("#sideArt").checked }); applyTheme(); return; }
   if (t.dataset.act === "gdue") { const el = t.closest("[data-goal]"), id = el.dataset.goal, g = get(id); if (!g) return; if (t.value) g.due = t.value; else delete g.due; put(id, g, { quiet: true }); refreshGoal(el, g); return; }

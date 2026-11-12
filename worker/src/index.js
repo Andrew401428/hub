@@ -13,10 +13,10 @@
 //   POST /push/test                -> send a test notification to every subscriber
 //   GET  /health                   -> {ok:true, push:bool} (no secret needed)
 //
-// A cron trigger (every 5 minutes) sends event reminders to every subscriber in
+// A cron trigger (every 5 minutes) sends event reminders, plus one daily goal summary, to every subscriber in
 // their own time zone. Needs secrets VAPID_PUBLIC + VAPID_PRIVATE (see README).
 
-import { sendPush, dueReminders } from "./push.js";
+import { sendPush, dueReminders, goalDigest } from "./push.js";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -61,6 +61,11 @@ async function allEvents(env) {
   return results.map(r => { try { return { id: r.id, ...JSON.parse(r.data) }; } catch { return null; } }).filter(e => e && !e.deleted);
 }
 
+async function docsWithPrefix(env, prefix) {
+  const { results } = await env.DB.prepare("SELECT id, data FROM docs WHERE id >= ? AND id < ?").bind(prefix, prefix + "￿").all();
+  return results.map(r => { try { return { id: r.id, ...JSON.parse(r.data) }; } catch { return null; } }).filter(e => e && !e.deleted);
+}
+
 async function broadcast(env, payload, { onlyDueFor } = {}) {
   await ensureTables(env);
   const { results } = await env.DB.prepare("SELECT id, sub, tz FROM subs").all();
@@ -75,7 +80,7 @@ async function broadcast(env, payload, { onlyDueFor } = {}) {
         await env.DB.prepare("INSERT OR IGNORE INTO sent (key, at) VALUES (?, ?)").bind(`${row.id}:${item.key}`, new Date().toISOString()).run();
       }
       try {
-        const r = await sendPush(env, sub, { title: item.title, body: item.body, tag: item.key || "hub-test", url: "./#cal" });
+        const r = await sendPush(env, sub, { title: item.title, body: item.body, tag: item.key || "hub-test", url: item.url || "./#cal" });
         if (r.gone) { await env.DB.prepare("DELETE FROM subs WHERE id = ?").bind(row.id).run(); dropped++; break; }
         if (r.ok) sent++;
       } catch (e) { console.log("push failed", e.message); }
@@ -151,9 +156,10 @@ export default {
   async scheduled(event, env, ctx) {
     if (!pushReady(env) || !env.HUB_SECRET) return;
     await ensureTables(env);
-    const events = await allEvents(env), now = new Date();
+    const events = await allEvents(env), now = new Date(), goals = await docsWithPrefix(env, "goal:");
+    const cfg = (await docsWithPrefix(env, "settings:notify"))[0] || {};
     ctx.waitUntil((async () => {
-      const r = await broadcast(env, null, { onlyDueFor: tz => dueReminders(events, tz, now) });
+      const r = await broadcast(env, null, { onlyDueFor: tz => [...dueReminders(events, tz, now), ...goalDigest(goals, cfg, tz, now)] });
       await env.DB.prepare("DELETE FROM sent WHERE at < ?").bind(new Date(Date.now() - 3 * 864e5).toISOString()).run();
       console.log("reminders", JSON.stringify(r));
     })());

@@ -98,3 +98,31 @@ export function dueReminders(events, tz, now = new Date()) {
   }
   return due;
 }
+
+// One summary push a day for goals (so many goals still means one notification).
+// goal.notify: "daily" (default) | "weekly" (Mondays) | "due" (only when something is due within 2 days) | "off".
+// cfg = settings:notify {digest:bool, digestTime:"HH:MM"}.
+const leaves = g => (g.subs || []).flatMap(x => x.kids?.length ? x.kids : [x]);
+const whenTxt = (d, ymd) => d < ymd ? "overdue" : d === ymd ? "today" : d === addDays(ymd, 1) ? "tomorrow" : parse(d).toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric" });
+export function goalDigest(goals, cfg = {}, tz = "UTC", now = new Date()) {
+  if (cfg.digest === false) return [];
+  const { ymd, minutes } = localNow(tz, now), [h, m] = String(cfg.digestTime || "09:00").split(":").map(Number), delta = minutes - (h * 60 + (m || 0));
+  if (!(delta >= 0 && delta < 10)) return [];
+  const monday = parse(ymd).getUTCDay() === 1, soon = addDays(ymd, 2), rows = [];
+  for (const g of goals) {
+    if (!g || g.done || g.deleted) continue;
+    const mode = g.notify || "daily"; if (mode === "off") continue;
+    const open = leaves(g).filter(x => !x.done), dues = open.filter(x => x.due && x.due <= soon).map(x => x.due);
+    if (g.due && g.due <= soon) dues.push(g.due);
+    const urgent = dues.length ? dues.sort()[0] : null;
+    if (!(urgent || mode === "daily" || (mode === "weekly" && monday))) continue;
+    const head = `${g.emoji ? g.emoji + " " : ""}${g.title || "Goal"}`;
+    const nxt = open.find(x => x.due === urgent) || open[0];
+    const tail = urgent ? `${dues.length > 1 ? dues.length + " " : ""}${urgent < ymd ? "overdue" : "due " + whenTxt(urgent, ymd)}${nxt ? " · " + nxt.text : ""}` : nxt ? "next: " + nxt.text : "keep going";
+    rows.push({ u: urgent || "9999", o: g.order ?? 99, line: `${head}: ${tail}`.slice(0, 110) });
+  }
+  if (!rows.length) return [];
+  rows.sort((a, b) => a.u < b.u ? -1 : a.u > b.u ? 1 : a.o - b.o);
+  const more = rows.length - 5;
+  return [{ key: `digest@${ymd}`, title: `Goals today (${rows.length})`, body: rows.slice(0, 5).map(r => r.line).join("\n") + (more > 0 ? `\n+${more} more` : ""), url: "./#goals" }];
+}
