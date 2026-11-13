@@ -537,8 +537,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <div id="toasts"></div>
 <script>
 {
-const APP_VERSION = "0.14.2";
+const APP_VERSION = "0.14.3";
 const CHANGELOG = [
+  "0.14.3 events get an All day switch in the event form (no start or end time, shows in the all-day row)",
   "0.14.2 wishlist items and Today's focus picks also slide to the bottom when checked",
   "0.14.1 checked list items and goal steps slide to the bottom; unchecking brings them back up above the checked ones",
   "0.14.0 notifications: one daily goal summary push (time in Settings > Reminders), each goal can be daily, weekly, only when due, or never; shifts remind 1 hour before",
@@ -918,7 +919,7 @@ function checkReminders() {
       fired.add(key); lsSet("fired", [...fired].slice(-500));
       const body = `${fmtTime(ev.start)}${ev.loc ? " · " + ev.loc : ""}${ev.remind ? " (in " + ev.remind + " min)" : ""}`;
       toast("⏰ " + ev.title + " · " + body, 8000);
-      if (window.Notification && Notification.permission === "granted") { try { new Notification(ev.title, { body, tag: key }); } catch { navigator.serviceWorker?.ready.then(r => r.showNotification(ev.title, { body, tag: key })); } }
+      if (window.Notification && Notification.permission === "granted" && !(lsGet("pushOn", false) && SYNC.cfg && !isSupa(SYNC.cfg))) { try { new Notification(ev.title, { body, tag: key }); } catch { navigator.serviceWorker?.ready.then(r => r.showNotification(ev.title, { body, tag: key })); } }
     }
   }
 }
@@ -1532,7 +1533,8 @@ function eventForm(ev = {}, date) {
     ${ps.length && !ev.id ? `<label class="field">Fill from a preset</label><select name="_preset"><option value="">Choose…</option>${ps.map(p => `<option value="${p.id}">${esc(p.name)} · ${fmtTime(p.start)} – ${fmtTime(p.end)}</option>`).join("")}</select>` : ""}
     <label class="field">Title</label><input class="in" name="title" value="${esc(v.title)}" placeholder="Work shift, dentist, …">
     <div class="two"><div><label class="field">Date</label><input class="in" type="date" name="date" value="${v.date}"></div><div><label class="field">Type</label><div class="seg" data-seg="cat"><button type="button" data-v="other" class="${v.cat === "other" ? "on" : ""}">Other</button><button type="button" data-v="work" class="${v.cat === "work" ? "on" : ""}">Work</button></div><input type="hidden" name="cat" value="${v.cat}"></div></div>
-    <div class="two"><div><label class="field">Start</label><input class="in" type="time" name="start" value="${v.start}"></div><div><label class="field">End</label><input class="in" type="time" name="end" value="${v.end}"></div></div>
+    <label class="row" style="gap:8px;margin-top:10px;cursor:pointer"><input type="checkbox" name="_allday"${ev.id && !ev.start ? " checked" : ""}> <span>All day</span></label>
+    <div class="two" id="timeWrap" style="display:${ev.id && !ev.start ? "none" : "grid"}"><div><label class="field">Start</label><input class="in" type="time" name="start" value="${v.start}"></div><div><label class="field">End</label><input class="in" type="time" name="end" value="${v.end}"></div></div>
     <div class="two"><div><label class="field">Location</label><input class="in" name="loc" value="${esc(v.loc)}" placeholder="optional"></div><div><label class="field">Pay rate ($/h, work)</label><input class="in" type="number" step="0.01" name="rate" value="${v.rate || ""}" placeholder="from preset"></div></div>
     <div class="two"><div><label class="field">Remind me</label><select name="remind">${[[-1, "No reminder"], [0, "At start"], [10, "10 min before"], [30, "30 min before"], [60, "1 hour before"], [120, "2 hours before"], [1440, "1 day before"]].map(([m, t]) => `<option value="${m}"${v.remind == m ? " selected" : ""}>${t}</option>`).join("")}</select></div>
     <div><label class="field">Repeat</label><select name="repeat">${["none", "daily", "weekly", "biweekly", "monthly"].map(r => `<option value="${r}"${v.repeat === r ? " selected" : ""}>${r[0].toUpperCase() + r.slice(1)}</option>`).join("")}</select></div></div>
@@ -1540,6 +1542,7 @@ function eventForm(ev = {}, date) {
     <label class="field">Color</label>${swatchRow(v.color)}
     <label class="field">Notes</label><textarea name="note" rows="2">${esc(v.note)}</textarea>
     <div class="row" style="margin-top:16px">${ev.id ? `<button class="btn ghost danger" data-act="delEvent">Delete</button><a class="btn ghost" href="${gcalLink(v)}" target="_blank" rel="noopener">${I.ext} Google Calendar</a>` : ""}<span class="sp"></span><button class="btn ghost" data-act="close">Cancel</button><button class="btn primary" data-act="saveEvent">Save</button></div>`);
+  $("[name=_allday]", b).onchange = e => { $("#timeWrap", b).style.display = e.target.checked ? "none" : "grid"; if (!e.target.checked && !$("[name=start]", b).value) $("[name=start]", b).value = "09:00"; };
   $("[name=repeat]", b).onchange = e => $("#untilWrap", b).style.display = e.target.value === "none" ? "none" : "block";
   const psel = $("[name=_preset]", b); if (psel) psel.onchange = () => { const p = ps.find(x => x.id === psel.value); if (!p) return; $("[name=title]", b).value = p.name; $("[name=start]", b).value = p.start; $("[name=end]", b).value = p.end; $("[name=loc]", b).value = p.loc || ""; $("[name=remind]", b).value = p.remind ?? 30; $("[name=cat]", b).value = p.cat || "work"; $("[name=rate]", b).value = p.rate || ""; $$("[data-seg] button", b).forEach(x => x.classList.toggle("on", x.dataset.v === (p.cat || "work"))); if (p.color) { $("[name=color]", b).value = p.color; $$("[data-swatch] .sw", b).forEach(x => x.classList.toggle("on", x.dataset.c === p.color)); } };
   b.addEventListener("click", async e => {
@@ -1551,6 +1554,7 @@ function eventForm(ev = {}, date) {
       const f = {}; $$("[name]", b).forEach(i => { if (!i.name.startsWith("_")) f[i.name] = i.value.trim(); });
       if (!f.title) { $("[name=title]", b).focus(); return toast("Give it a title"); }
       f.remind = Number(f.remind); if (f.repeat === "none") f.until = ""; f.rate = Number(f.rate) || 0;
+      if ($("[name=_allday]", b).checked) { f.start = ""; f.end = ""; f.remind = -1; }
       put(ev.id || "event:" + uid(), { ...ev, ...f, created: ev.created || Date.now() }); b.close(); toast(ev.id ? "Saved" : "Event added");
     }
   });
@@ -1873,8 +1877,8 @@ $("#view").addEventListener("submit", e => {
   e.preventDefault(); const f = e.target, inp = $("input", f), v = inp.value.trim(); if (!v) return;
   if (f.dataset.act === "addItem") {
     const it = { id: uid(), text: v, done: false, created: Date.now() };
-    patch("list:" + route().arg, l => l.items.push(it), { quiet: true });
-    $("#emptyItems")?.remove(); $("#items").insertAdjacentHTML("beforeend", itemRow(it)); $("#items").lastElementChild.classList.add("in");
+    patch("list:" + route().arg, l => l.items.unshift(it), { quiet: true });
+    $("#emptyItems")?.remove(); $("#items").insertAdjacentHTML("afterbegin", itemRow(it)); $("#items").firstElementChild.classList.add("in");
     updateListHeader(get("list:" + route().arg)); inp.value = ""; inp.focus();
   }
   if (f.dataset.act === "addSub" || f.dataset.act === "addKid") {
