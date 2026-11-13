@@ -233,6 +233,7 @@ section{margin-bottom:26px}
 .wish .name{flex:0 1 auto;margin-right:auto;font-weight:600;cursor:pointer;min-width:0;position:relative;transition:color .3s}
 .wish .name::after{content:"";position:absolute;left:0;top:50%;height:1.5px;width:0;background:var(--muted);transition:width .35s var(--ease)}
 .wish.done .name{color:var(--muted)}.wish.done .name::after{width:100%}
+.wish.done{padding-top:6px;padding-bottom:6px}.wish.done .meta,.wish.done .offers,.wish.done .price,.wish.done .head .icon{display:none}
 .wish .meta{font-size:12.5px;color:var(--muted);margin:5px 0 0 34px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .price{font-weight:700;font-size:13px;padding:4px 10px;border-radius:10px;background:var(--ok-soft);color:#15803d;white-space:nowrap}
 .price.over{background:var(--warn-soft);color:#b45309}
@@ -537,8 +538,9 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 <div id="toasts"></div>
 <script>
 {
-const APP_VERSION = "0.14.3";
+const APP_VERSION = "0.14.4";
 const CHANGELOG = [
+  "0.14.4 a ticked wishlist item shrinks to just its title (price, dates and details hide) and the price bot stops searching for it; untick it to bring everything back",
   "0.14.3 events get an All day switch in the event form (no start or end time, shows in the all-day row)",
   "0.14.2 wishlist items and Today's focus picks also slide to the bottom when checked",
   "0.14.1 checked list items and goal steps slide to the bottom; unchecking brings them back up above the checked ones",
@@ -1273,7 +1275,7 @@ const wishRow = it => {
   let o = `<div class="wish${it.done ? " done" : ""}" data-wish="${it.id}"><div class="head"><button class="chk" role="checkbox" aria-checked="${!!it.done}" data-act="wtick" style="--lc:#f59e0b">${I.check}</button><span class="name ren" contenteditable="true" spellcheck="false" data-act="wname" title="Tap to rename">${esc(it.name)}</span>
     ${best ? `<span class="price${it.budget && best.total > it.budget ? " over" : ""}" data-act="wopen">${money(best.total)}</span>` : ""}<button class="btn ghost icon" data-act="wedit" title="Edit">${I.edit}</button></div>
     <div class="meta">${it.done && !it.by ? "" : `<label class="chip datebtn ${it.by ? (late ? "bad" : soon ? "work" : "grey") : "grey"}" title="Pick the day you need it by">${it.by ? (late ? "⚠ " : "") + relDay(it.by) : "📅 Need by"}<input type="date" data-act="wby" value="${esc(it.by || "")}" aria-label="Need by"></label>`}${it.qty > 1 ? `<span>×${it.qty}</span>` : ""}${it.budget ? `<span>budget ${money(it.budget)}</span>` : ""}${best ? `<span>${esc(best.store)}</span>` : ""}${it.note ? `<span>· ${esc(it.note)}</span>` : ""}</div>`;
-  if (open) {
+  if (open && !it.done) {
     o += `<div class="offers">`;
     if (pr?.offers?.length) {
       o += `<table><tr><th>Store</th><th>Price</th><th>Ship</th><th>Tax</th><th>Total</th><th></th></tr>`;
